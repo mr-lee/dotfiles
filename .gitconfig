@@ -1,0 +1,25 @@
+[core]
+	excludesfile = /home/mlee/.gitignore_global
+	editor = vim
+[user]
+	name = Matt Lee
+	email = mlee@whtrading.com
+[giggle]
+	main-window-maximized = false
+	main-window-geometry = 1291x834+217+169
+	main-window-view = HistoryView
+	file-view-vpane-position = 500
+	history-view-vpane-position = 623
+[alias]
+  logpretty = "log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative"
+  lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --
+	d = difftool
+  co = checkout
+  ci = commit
+  up = pull
+[merge]
+	tool = vimdiff
+[diff]
+	tool = vimdiff
+[difftool]
+	prompt = false
