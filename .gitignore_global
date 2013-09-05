@@ -6,11 +6,13 @@
 *.exe
 *.o
 *.so
+*.pb.*
 
 # QT Files #
 ############
 moc*
 ui_*
+qrc_*
 
 # Packages #
 ############
@@ -52,6 +54,8 @@ build_shell*
 build_debug*
 Deleted*
 deleted*
+*.pb.*
+*MD5Sum*
 
 #version files
 *CVS*

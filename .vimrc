@@ -71,7 +71,10 @@ map <a-]> :vs <CR> :exec("tag ".expand("<cword>"))<CR>
 map <c-c> <leader>
 
 "Taglist function browser
-map <leader>f :TlistToggle<CR>
+map <leader>f :TlistToggle<CR><C-l><C-j><C-w>=
+
+"Open file in std manner
+map <leader>o :vs<CR><C-l>:b2<CR><leader>f
 
 " File browser
 map <leader>n :NERDTreeToggle<CR>
@@ -103,6 +106,8 @@ if 'VIRTUAL_ENV' in os.environ:
 EOF
 
 inoremap jj <ESC>
+
+map <C-x> <C-a>
 
 " Nosetest integration
 map <leader>dt :set makerpg=python\ manage.py\ test\|:call MakeGreen()<CR>
