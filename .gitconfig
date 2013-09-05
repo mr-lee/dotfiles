@@ -17,6 +17,7 @@
   co = checkout
   ci = commit
   up = pull
+  df = diff --cached --color
 [merge]
 	tool = vimdiff
 [diff]
