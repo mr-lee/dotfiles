@@ -34,6 +34,8 @@ plugins=(git)
 source $ZSH/oh-my-zsh.sh
 
 # Customize to your needs...
+export CC=gcc
+
 if [ -f ~/prod/bin/set_local_pathing.ksh ]; then
   . ~/prod/bin/set_local_pathing.ksh
 else

@@ -18,6 +18,7 @@
   ci = commit
   up = pull
   df = diff --cached --color
+  dc = diff --color
 [merge]
 	tool = vimdiff
 [diff]
