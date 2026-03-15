@@ -1,0 +1,61 @@
+{
+  "cleanupPeriodDays": 9000,
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "Bash(*)",
+      "WebSearch",
+      "Agent",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:developer.mozilla.org)",
+      "WebFetch(domain:docs.python.org)",
+      "WebFetch(domain:nodejs.org)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:pypi.org)"
+    ],
+    "ask": [
+      "Bash(sudo *)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(dd *)",
+      "Bash(mkfs*)",
+      "Bash(diskutil eraseDisk *)",
+      "Bash(diskutil partitionDisk *)",
+      "Bash(git push --force*)",
+      "Bash(git push * --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push * -f)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git clean * -f*)",
+      "Bash(shutdown *)",
+      "Bash(reboot*)",
+      "Bash(halt*)",
+      "Bash(killall *)",
+      "Bash(pkill *)",
+      "Bash(chmod -R *)",
+      "Bash(chown -R *)",
+      "Bash(launchctl *)",
+      "Bash(* | sh)",
+      "Bash(* | bash)",
+      "Bash(* | zsh)",
+      "Bash(networksetup *)"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "npx -y ccstatusline@latest",
+    "padding": 0
+  },
+  "effortLevel": "high",
+  "voiceEnabled": true
+}
