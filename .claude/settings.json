@@ -48,6 +48,8 @@
       "Bash(* | sh)",
       "Bash(* | bash)",
       "Bash(* | zsh)",
+      "Bash(eval *curl*)",
+      "Bash(eval *wget*)",
       "Bash(networksetup *)"
     ]
   },
