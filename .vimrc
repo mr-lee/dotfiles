@@ -1,133 +1,130 @@
-filetype off
-call pathogen#runtime_append_all_bundles()
-call pathogen#helptags()
+" ==========================
+" Plugin Manager (vim-plug)
+" ==========================
+" Auto-install vim-plug if missing
+let data_dir = has('nvim') ? stdpath('data') . '/site' : '~/.vim'
+if empty(glob(data_dir . '/autoload/plug.vim'))
+  silent execute '!curl -fLo '.data_dir.'/autoload/plug.vim --create-dirs
+    \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
 
-" Code indenting
+call plug#begin('~/.vim/plugged')
+Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-commentary'
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf.vim'
+Plug 'mbbill/undotree'
+Plug 'itchyny/lightline.vim'
+call plug#end()
+
+" ==========================
+" Core Settings
+" ==========================
+filetype plugin indent on
+syntax on
+set number
+set smartindent
+set autoindent
+set copyindent
+set expandtab
+set tabstop=2
+set shiftwidth=2
+set encoding=utf-8
+set background=dark
+set showcmd
+set hidden
+set laststatus=2
+set noshowmode
+
+" ==========================
+" Search
+" ==========================
+set hlsearch
+set incsearch
+set ignorecase
+set smartcase
+
+" ==========================
+" Folding
+" ==========================
 set foldmethod=indent
 set foldlevel=99
 
-" Movement around windows
-map <c-j> <c-w>j
-map <c-k> <c-w>k
-map <c-l> <c-w>l
-map <c-h> <c-w>h
-
-filetype on
-filetype plugin indent on
-set number
-syntax on
-set cindent
-set smartindent
-"set mouse=a
-set bg=dark
-set ignorecase
-set copyindent
-set autoindent
-set ts=2
-set sw=2
-set encoding=utf-8
-set expandtab
-set hlsearch
-
-
-map <leader>td <Plug>TaskList
-map <leader>g :GundoToggle<CR>
-
-let g:pyflakes_use_quickfix = 0
-let g:pep8_map='<leader>8'
-
-" Tab completion configuration
-au FileType python set omnifunc=pythoncomplete#Complete
-let g:SuperTabDefaultCompletionType = "context"
+" ==========================
+" Completion
+" ==========================
+set wildmenu
+set wildmode=longest:full,full
 set completeopt=menuone,longest,preview
+set backspace=indent,eol,start
 
-"cheap hack to use cpp code completion with ctags in pathogen
-au BufNewFile,BufRead,BufEnter *.cpp,*hpp set omnifunc=omni#cpp#complete#Main
-autocmd FileType cpp set omnifunc=omni#cpp#complete#Main
-"Enable c++ code completion using ctags
-set tags+=~/.vim/tags/cpp
-set tags+=~/.vim/tags/cpp_src/
-set tags+=~/.vim/tags/qt4
-set tags+=~/.vim/tags/wh_tags
-"Hotkey to build tags for personal project
-map <C-F6> :!ctags -R --sort=yes --c++-kinds=+pl --fields=+iaS --extra=+q .<CR>
-"OmniCppComplete settings (derived from vim.wikia.com/wiki/VimTip1608)
-let OmniCpp_NamespaceSearch = 1
-let OmniCpp_GlobalScopeSearch = 1
-let OmniCpp_ShowAccess = 1
-let OmniCpp_ShowPrototypeInAbbr = 1 " show function parameters
-let OmniCpp_MayCompleteDot = 1 " autocomplete after .
-let OmniCpp_MayCompleteArrow = 1 " autocomplete after ->
-let OmniCpp_MayCompleteScope = 1 " autocomplete after ::
-let OmniCpp_DefaultNamespaces = ["std", "_GLIBCXX_STD"]
-" automatically open and close the popup menu / preview window
-au CursorMovedI,InsertLeave * if pumvisible() == 0|silent! pclose|endif
-set completeopt=menuone,menu,longest,preview
+" ==========================
+" Visual
+" ==========================
+set cursorline
+set scrolloff=5
+set signcolumn=yes
 
-"Ctags code browsing shortcuts for awesomeness
-map <a-]> :vs <CR> :exec("tag ".expand("<cword>"))<CR>
+" ==========================
+" Persistent Undo
+" ==========================
+set undofile
+set undodir=~/.vim/undodir
 
-"I'm sure there's a better key to use as leader, I hate meta keys...
-map <c-c> <leader>
+" ==========================
+" Window Navigation
+" ==========================
+map <C-j> <C-w>j
+map <C-k> <C-w>k
+map <C-l> <C-w>l
+map <C-h> <C-w>h
 
-"Taglist function browser
-map <leader>f :TlistToggle<CR><C-l><C-j><C-w>=
-
-"Open file in std manner
-map <leader>o :vs<CR><C-l>:b2<CR><leader>f
-
-" File browser
-map <leader>n :NERDTreeToggle<CR>
-"Configuration for nerdtree
-let NERDTreeIgnore=['\.vim', '\.pyc', '\.o', '\.d', '\~$', '\.swp']
-
-" Refactoring and go to definition
-map <leader>j :RopeGotoDefinition<CR>
-map <leader>r :RopeRename<CR>
-
-nmap <leader>a <Esc>:Ack!
-nmap <leader>s <Esc>:Ack!<C-R><C-W><CR>
-
-" Git integration
-set statusline+=%{fugitive#statusline()}
-
-set showcmd
-
-" Virtualenv recognition
-py << EOF
-import os.path
-import sys
-import vim
-if 'VIRTUAL_ENV' in os.environ:
-  project_base_dir = os.environ['VIRTUAL_ENV']
-  sys.path.insert(0,project_base_dir)
-  activate_this = os.path.join(project_base_dir, 'bin/activate_this.py')
-  execfile(activate_this, dict(__file__=activate_this))
-EOF
-
+" ==========================
+" Key Bindings
+" ==========================
+let mapleader = " "
 inoremap jj <ESC>
 
-map <C-x> <C-a>
+" fzf
+nnoremap <leader>f :Files<CR>
+nnoremap <leader>b :Buffers<CR>
+nnoremap <leader>a :Rg<CR>
+nnoremap <leader>s :Rg <C-R><C-W><CR>
+nnoremap <leader>/ :BLines<CR>
 
-" Nosetest integration
-map <leader>dt :set makerpg=python\ manage.py\ test\|:call MakeGreen()<CR>
+" Undotree
+nnoremap <leader>u :UndotreeToggle<CR>
 
+" Fugitive
+nnoremap <leader>gs :Git<CR>
+nnoremap <leader>gd :Gdiffsplit<CR>
+nnoremap <leader>gb :Git blame<CR>
+nnoremap <leader>gl :Git log --oneline<CR>
 
-"Bundles for vim-update-bundles
-" Bundle: tope/fugitive 
-" Bundle: msanders/snipmate.vim
-" Bundle: tpope/vim-git
-" Bundle: ervandew/supertab
-" Bundle: sontek/minibufexpl.vim
-" Bundle: wincent/Command-T
-" Bundle: mitechie/pyflakes-pathogen
-" Bundle: mileszs.ack.vim
-" Bundle: sjl/gundo.vim
-" Bundle: fs111/pydoc.vim
-" Bundle: pep8
-" Bundle: alfredodeza/pytest.vim
-" Bundle: reinh/vim-makegreen
-" Bundle: Tasklist.vim
-" Bundle: The-NERD-tree
-" Bundle: sontek/rope-vim
-" Bundle: OmniCppComplete
+" File browser (netrw)
+nnoremap <leader>n :Explore<CR>
+
+" Clear search highlight
+nnoremap <leader><space> :nohlsearch<CR>
+
+" Quick save
+nnoremap <leader>w :w<CR>
+
+" ==========================
+" Lightline
+" ==========================
+let g:lightline = {
+  \ 'active': {
+  \   'left': [ ['mode', 'paste'], ['gitbranch', 'readonly', 'filename', 'modified'] ],
+  \ },
+  \ 'component_function': {
+  \   'gitbranch': 'FugitiveHead',
+  \ },
+  \ }
+
+" ==========================
+" fzf
+" ==========================
+let g:fzf_layout = { 'down': '~40%' }
