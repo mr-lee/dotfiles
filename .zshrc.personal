@@ -1,0 +1,95 @@
+# ~/.zshrc.personal - Personal zsh config (sourced from ~/.zshrc)
+# Repo: github.com/mr-lee/dotfiles
+
+# ==========================
+# General
+# ==========================
+export EDITOR=vim
+export LANG=en_US.UTF-8
+
+# History
+HISTSIZE=50000
+SAVEHIST=50000
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_REDUCE_BLANKS
+
+# Directory navigation
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_SILENT
+setopt PUSHD_IGNORE_DUPS
+DIRSTACKSIZE=10
+
+# Misc
+setopt NO_BEEP
+setopt INTERACTIVE_COMMENTS
+
+# ==========================
+# Completion
+# ==========================
+autoload -Uz compinit
+# Only regenerate compinit dump once per day
+if [[ -n ~/.zcompdump(#qN.mh+24) ]]; then
+    compinit
+else
+    compinit -C
+fi
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# ==========================
+# Key Bindings (vim mode)
+# ==========================
+bindkey -v
+export KEYTIMEOUT=1
+
+# Restore useful emacs bindings in vim insert mode
+bindkey '^A' beginning-of-line
+bindkey '^E' end-of-line
+bindkey '^R' history-incremental-search-backward
+bindkey '^P' up-history
+bindkey '^N' down-history
+
+# ==========================
+# Aliases
+# ==========================
+alias ll='ls -lah'
+alias la='ls -A'
+alias gs='git status'
+alias gl='git lg'
+alias gd='git diff'
+alias gco='git checkout'
+alias gc='git commit'
+alias gp='git push'
+alias gpu='git pull'
+
+# ==========================
+# Plugins (git-cloned, no framework)
+# ==========================
+ZSH_PLUGINS_DIR="${HOME}/.zsh/plugins"
+
+# zsh-autosuggestions
+if [[ -f "${ZSH_PLUGINS_DIR}/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
+    source "${ZSH_PLUGINS_DIR}/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+
+# zsh-syntax-highlighting (must be sourced last)
+if [[ -f "${ZSH_PLUGINS_DIR}/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+    source "${ZSH_PLUGINS_DIR}/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+
+# ==========================
+# Prompt (Starship)
+# ==========================
+if command -v starship &>/dev/null; then
+    eval "$(starship init zsh)"
+fi
+
+# ==========================
+# Local overrides (not versioned)
+# ==========================
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

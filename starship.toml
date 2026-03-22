@@ -1,0 +1,60 @@
+# Starship prompt config
+# Repo: github.com/mr-lee/dotfiles
+# Inspired by the original mrlee.zsh-theme
+
+format = """
+[────────────────────────────────────────────────────────](dimmed white)
+$directory\
+$git_branch\
+$git_status\
+$python\
+$golang\
+$nodejs\
+$character"""
+
+right_format = """$username$hostname $time"""
+
+[directory]
+style = "blue"
+truncation_length = 5
+
+[git_branch]
+format = " [($branch)]($style) "
+style = "green"
+
+[git_status]
+format = "[$all_status$ahead_behind]($style)"
+style = "red"
+
+[character]
+success_symbol = "[\\$](yellow)"
+error_symbol = "[\\$](red)"
+
+[username]
+show_always = true
+format = "[$user]($style)"
+style_user = "214"
+style_root = "red"
+
+[hostname]
+ssh_only = false
+format = "[@$hostname]($style) "
+style = "214"
+
+[time]
+disabled = false
+format = "[$time]($style)"
+style = "green"
+time_format = "%H:%M"
+
+[python]
+format = " [py $version]($style)"
+style = "dimmed yellow"
+
+[golang]
+format = " [go $version]($style)"
+style = "dimmed cyan"
+
+[nodejs]
+format = " [node $version]($style)"
+style = "dimmed green"
