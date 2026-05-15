@@ -2,6 +2,8 @@
 # Repo: github.com/mr-lee/dotfiles
 # Inspired by the original mrlee.zsh-theme
 
+scan_timeout = 50
+
 format = """
 [────────────────────────────────────────────────────────](dimmed white)
 $directory\
