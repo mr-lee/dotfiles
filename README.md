@@ -12,6 +12,7 @@ Personal dotfiles for macOS/Linux. Managed with symlinks, no framework.
 | `.vimrc` | vim-plug (auto-bootstraps). fzf, fugitive, undotree, surround, commentary, lightline. Space leader. |
 | `.zshrc.personal` | Personal zsh layer - sourced from your system `.zshrc`, doesn't replace it |
 | `starship.toml` | [Starship](https://starship.rs) prompt config |
+| `setup-cline-pass-agents.sh` | Credential-free bootstrap for Cline Pass provider config in Pi, Hermes, and opencode |
 
 ## Install
 
@@ -28,6 +29,30 @@ This will:
 - Append `source ~/.zshrc.personal` to your `.zshrc`
 
 Preview first with `./install.sh --dry-run`.
+
+## Cline Pass agents
+
+To configure Pi, Hermes, and opencode with the same Cline Pass provider setup:
+
+```bash
+./setup-cline-pass-agents.sh
+```
+
+This configures `cline-pass/glm-5.2` and `cline-pass/kimi-k3`, creates key helper scripts, and installs `hermes-cline` / `opencode-cline` launchers. It does not write credentials.
+
+Credential options:
+
+```bash
+# macOS Keychain
+security add-generic-password -a "$USER" -s pi-cline-api-key -w '<cline-pass-api-key>' -U
+security add-generic-password -a "$USER" -s hermes-cline-api-key -w '<cline-pass-api-key>' -U
+security add-generic-password -a "$USER" -s opencode-cline-api-key -w '<cline-pass-api-key>' -U
+
+# or portable shell fallback
+export CLINE_API_KEY='<cline-pass-api-key>'
+```
+
+Preview first with `./setup-cline-pass-agents.sh --dry-run`.
 
 ### Post-install
 

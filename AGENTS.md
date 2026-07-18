@@ -12,6 +12,7 @@ Personal dotfiles for Matt Lee. Public repo - no work-specific config here.
 .zshrc.personal    - Personal zsh config (sourced from ~/.zshrc)
 starship.toml      - Starship prompt config
 install.sh         - Full setup: symlinks, Starship, zsh plugins, zshrc wiring
+setup-cline-pass-agents.sh - Credential-free Cline Pass setup for Pi, Hermes, opencode
 ```
 
 ## Install
