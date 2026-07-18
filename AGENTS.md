@@ -13,6 +13,8 @@ Personal dotfiles for Matt Lee. Public repo - no work-specific config here.
 starship.toml      - Starship prompt config
 install.sh         - Full setup: symlinks, Starship, zsh plugins, zshrc wiring
 setup-cline-pass-agents.sh - Credential-free Cline Pass setup for Pi, Hermes, opencode
+setup-cloud-agent-machine.sh - Credential-free Ubuntu/Debian cloud dev bootstrap
+tmux-agent        - Stable tmux launcher for pilot/agent sessions
 ```
 
 ## Install
@@ -46,5 +48,6 @@ The install script:
 - Edit files in this repo, then re-run `install.sh` (idempotent - skips already-linked files)
 - Keep this repo public - never add secrets, work emails, API keys, or internal tooling references
 - Test tmux changes with `tmux source ~/.tmux.conf`
+- Test bootstrap scripts with `bash -n` and `--dry-run` when available
 - Test vim changes with `:source ~/.vimrc`
 - Test prompt changes with `eval "$(starship init zsh)"` or open a new shell

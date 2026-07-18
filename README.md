@@ -13,6 +13,8 @@ Personal dotfiles for macOS/Linux. Managed with symlinks, no framework.
 | `.zshrc.personal` | Personal zsh layer - sourced from your system `.zshrc`, doesn't replace it |
 | `starship.toml` | [Starship](https://starship.rs) prompt config |
 | `setup-cline-pass-agents.sh` | Credential-free bootstrap for Cline Pass provider config in Pi, Hermes, and opencode |
+| `setup-cloud-agent-machine.sh` | Credential-free Ubuntu/Debian cloud dev bootstrap for agents, Tailscale, Mosh, and tmux launchers |
+| `tmux-agent` | Stable tmux launcher for `pilot`, Codex, Cline, Cursor, Pi, Hermes, and opencode |
 
 ## Install
 
@@ -29,6 +31,60 @@ This will:
 - Append `source ~/.zshrc.personal` to your `.zshrc`
 
 Preview first with `./install.sh --dry-run`.
+
+## Cloud agent machine
+
+On a fresh Ubuntu/Debian cloud user:
+
+```bash
+git clone https://github.com/mr-lee/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./setup-cloud-agent-machine.sh
+```
+
+Preview first:
+
+```bash
+./setup-cloud-agent-machine.sh --dry-run
+```
+
+This installs base dev packages, Tailscale/Mosh, Codex, Cline, Cursor Agent, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
+
+Credentials stay explicit:
+
+```bash
+pass insert agents/cline-pass/pi
+pass insert agents/cline-pass/hermes
+pass insert agents/cline-pass/opencode
+codex login
+cline auth cline
+cursor-agent login
+```
+
+Tailscale login is also explicit:
+
+```bash
+sudo tailscale up --hostname <name>
+```
+
+Firewall and SSH hardening are opt-in, so a new SSH session is not surprise-locked:
+
+```bash
+./setup-cloud-agent-machine.sh --enable-firewall
+./setup-cloud-agent-machine.sh --harden-ssh
+```
+
+Stable launchers:
+
+```bash
+pilot
+codex-tmux
+cline-tmux
+cursor-tmux
+pi-tmux
+hermes-tmux
+opencode-tmux
+```
 
 ## Cline Pass agents
 

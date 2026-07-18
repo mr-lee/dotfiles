@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+usage:
+  tmux-agent <pilot|codex|cline|cursor|pi|hermes|opencode> [agent args...]
+  pilot [shell args...]
+  codex-tmux [codex args...]
+  cline-tmux [cline args...]
+  cursor-tmux [cursor-agent args...]
+  pi-tmux [pi args...]
+  hermes-tmux [hermes args...]
+  opencode-tmux [opencode args...]
+
+Attach to a stable tmux session for one agent, creating it if needed.
+EOF
+}
+
+prog="$(basename "$0")"
+case "$prog" in
+  pilot) set -- pilot "$@" ;;
+  codex-tmux) set -- codex "$@" ;;
+  cline-tmux) set -- cline "$@" ;;
+  cursor-tmux) set -- cursor "$@" ;;
+  pi-tmux) set -- pi "$@" ;;
+  hermes-tmux) set -- hermes "$@" ;;
+  opencode-tmux) set -- opencode "$@" ;;
+esac
+
+cursor_args() {
+  case "${1:-}" in
+    ""|--*)
+      ;;
+    login|logout|mcp|plugin|worker|status|whoami|models|about|update|create-chat|generate-rule|rule|install-shell-integration|uninstall-shell-integration)
+      printf '%s\0' cursor-agent "$@"
+      return
+      ;;
+  esac
+
+  for arg in "$@"; do
+    case "$arg" in
+      --model|--model=*|--version|-v|--help|-h)
+        printf '%s\0' cursor-agent "$@"
+        return
+        ;;
+    esac
+  done
+
+  printf '%s\0' cursor-agent --model "${CURSOR_AGENT_MODEL:-Auto}" "$@"
+}
+
+case "${1:-}" in
+  -h|--help|"")
+    usage
+    exit 0
+    ;;
+esac
+
+target="$1"
+shift
+
+session_prefix="${TMUX_AGENT_PREFIX:-agent}"
+case "$target" in
+  pilot)
+    session="${TMUX_PILOT_SESSION:-pilot}"
+    window="pilot"
+    if [ "$#" -eq 0 ]; then
+      cmd=("${SHELL:-/bin/bash}" -l)
+    else
+      cmd=("$@")
+    fi
+    ;;
+  codex)
+    session="${session_prefix}-codex"
+    window="codex"
+    cmd=(codex "$@")
+    ;;
+  cline)
+    session="${session_prefix}-cline"
+    window="cline"
+    cmd=(cline "$@")
+    ;;
+  cursor)
+    session="${session_prefix}-cursor"
+    window="cursor"
+    mapfile -d '' -t cmd < <(cursor_args "$@")
+    ;;
+  pi)
+    session="${session_prefix}-pi"
+    window="pi"
+    cmd=(pi "$@")
+    ;;
+  hermes)
+    session="${session_prefix}-hermes"
+    window="hermes"
+    cmd=(hermes "$@")
+    ;;
+  opencode)
+    session="${session_prefix}-opencode"
+    window="opencode"
+    cmd=(opencode "$@")
+    ;;
+  *)
+    printf 'unknown target: %s\n\n' "$target" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
+
+if ! command -v tmux >/dev/null 2>&1; then
+  printf 'tmux is required\n' >&2
+  exit 1
+fi
+
+export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.npm-global/bin:$HOME/.grok/bin:$PATH"
+
+if tmux has-session -t "$session" 2>/dev/null; then
+  if [ -n "${TMUX:-}" ]; then
+    exec tmux switch-client -t "$session"
+  fi
+  exec tmux attach -t "$session"
+fi
+
+cmd_string=""
+for arg in "${cmd[@]}"; do
+  printf -v quoted '%q' "$arg"
+  cmd_string+="${quoted} "
+done
+cmd_string='export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.npm-global/bin:$HOME/.grok/bin:$PATH"; exec '"$cmd_string"
+
+if [ -n "${TMUX:-}" ]; then
+  tmux new-session -d -s "$session" -n "$window" "$cmd_string"
+  exec tmux switch-client -t "$session"
+fi
+
+exec tmux new-session -s "$session" -n "$window" "$cmd_string"
