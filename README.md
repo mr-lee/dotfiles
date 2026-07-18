@@ -48,11 +48,18 @@ security add-generic-password -a "$USER" -s pi-cline-api-key -w '<cline-pass-api
 security add-generic-password -a "$USER" -s hermes-cline-api-key -w '<cline-pass-api-key>' -U
 security add-generic-password -a "$USER" -s opencode-cline-api-key -w '<cline-pass-api-key>' -U
 
+# Linux pass
+pass insert agents/cline-pass/pi
+pass insert agents/cline-pass/hermes
+pass insert agents/cline-pass/opencode
+
 # or portable shell fallback
 export CLINE_API_KEY='<cline-pass-api-key>'
 ```
 
 Preview first with `./setup-cline-pass-agents.sh --dry-run`.
+
+Use `--pass-prefix <prefix>` if your Linux `pass` entries live somewhere other than `agents/cline-pass`.
 
 ### Post-install
 
