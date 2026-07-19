@@ -4,11 +4,15 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 usage:
-  tmux-agent <pilot|codex|cline|cursor|pi|hermes|opencode> [agent args...]
+  tmux-agent <pilot|codex|claude|cline|cursor|gemini|goose|agy|pi|hermes|opencode> [agent args...]
   pilot [shell args...]
   codex-tmux [codex args...]
+  claude-tmux [claude args...]
   cline-tmux [cline args...]
   cursor-tmux [cursor-agent args...]
+  gemini-tmux [gemini args...]
+  goose-tmux [goose args...]
+  agy-tmux [agy args...]
   pi-tmux [pi args...]
   hermes-tmux [hermes args...]
   opencode-tmux [opencode args...]
@@ -21,8 +25,12 @@ prog="$(basename "$0")"
 case "$prog" in
   pilot) set -- pilot "$@" ;;
   codex-tmux) set -- codex "$@" ;;
+  claude-tmux) set -- claude "$@" ;;
   cline-tmux) set -- cline "$@" ;;
   cursor-tmux) set -- cursor "$@" ;;
+  gemini-tmux) set -- gemini "$@" ;;
+  goose-tmux) set -- goose "$@" ;;
+  agy-tmux|antigravity-tmux) set -- agy "$@" ;;
   pi-tmux) set -- pi "$@" ;;
   hermes-tmux) set -- hermes "$@" ;;
   opencode-tmux) set -- opencode "$@" ;;
@@ -76,6 +84,11 @@ case "$target" in
     window="codex"
     cmd=(codex "$@")
     ;;
+  claude)
+    session="${session_prefix}-claude"
+    window="claude"
+    cmd=(claude "$@")
+    ;;
   cline)
     session="${session_prefix}-cline"
     window="cline"
@@ -85,6 +98,21 @@ case "$target" in
     session="${session_prefix}-cursor"
     window="cursor"
     mapfile -d '' -t cmd < <(cursor_args "$@")
+    ;;
+  gemini)
+    session="${session_prefix}-gemini"
+    window="gemini"
+    cmd=(gemini "$@")
+    ;;
+  goose)
+    session="${session_prefix}-goose"
+    window="goose"
+    cmd=(goose "$@")
+    ;;
+  agy)
+    session="${session_prefix}-agy"
+    window="agy"
+    cmd=(agy "$@")
     ;;
   pi)
     session="${session_prefix}-pi"

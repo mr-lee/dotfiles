@@ -14,7 +14,7 @@ Personal dotfiles for macOS/Linux. Managed with symlinks, no framework.
 | `starship.toml` | [Starship](https://starship.rs) prompt config |
 | `setup-cline-pass-agents.sh` | Credential-free bootstrap for Cline Pass provider config in Pi, Hermes, and opencode |
 | `setup-cloud-agent-machine.sh` | Credential-free Ubuntu/Debian cloud dev bootstrap for agents, Tailscale, Mosh, and tmux launchers |
-| `tmux-agent` | Stable tmux launcher for `pilot`, Codex, Cline, Cursor, Pi, Hermes, and opencode |
+| `tmux-agent` | Stable tmux launcher for `pilot`, Codex, Claude, Cline, Cursor, Gemini, Goose, Antigravity, Pi, Hermes, and opencode |
 
 ## Install
 
@@ -48,7 +48,7 @@ Preview first:
 ./setup-cloud-agent-machine.sh --dry-run
 ```
 
-This installs base dev packages, Tailscale/Mosh, Codex, Cline, Cursor Agent, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
+This installs base dev packages, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Gemini CLI, Goose, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
 
 Credentials stay explicit:
 
@@ -57,8 +57,12 @@ pass insert agents/cline-pass/pi
 pass insert agents/cline-pass/hermes
 pass insert agents/cline-pass/opencode
 codex login
+claude auth login
 cline auth cline
 cursor-agent login
+gemini
+goose configure
+agy
 ```
 
 Tailscale login is also explicit:
@@ -79,8 +83,12 @@ Stable launchers:
 ```bash
 pilot
 codex-tmux
+claude-tmux
 cline-tmux
 cursor-tmux
+gemini-tmux
+goose-tmux
+agy-tmux
 pi-tmux
 hermes-tmux
 opencode-tmux
