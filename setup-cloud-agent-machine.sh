@@ -23,7 +23,7 @@ Credential-free bootstrap for an agentic cloud dev machine.
 Defaults:
   - install Ubuntu/Debian base packages when apt/sudo are available
   - install Tailscale and Mosh, but do not run tailscale up unless requested
-  - install Codex, Claude Code, Cline, Cursor Agent, Gemini CLI, Goose, Antigravity CLI, Pi, Hermes, and opencode
+  - install Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, and opencode
   - configure Cline Pass adapters for Pi, Hermes, and opencode
   - install tmux-agent wrappers for stable phone/laptop sessions
   - do not enable firewall or rewrite sshd settings unless explicitly requested
@@ -219,10 +219,10 @@ install_agents() {
 
   if need_cmd npm; then
     run npm config set prefix "$TARGET_DIR/.local"
-    run npm install -g @openai/codex @anthropic-ai/claude-code @google/gemini-cli cline opencode-ai
+    run npm install -g @openai/codex @anthropic-ai/claude-code cline opencode-ai
     run npm install -g @earendil-works/pi-coding-agent --ignore-scripts
   else
-    echo "  WARN  npm missing; skipping Codex/Claude/Gemini/Cline/Pi/opencode installs" >&2
+    echo "  WARN  npm missing; skipping Codex/Claude/Cline/Pi/opencode installs" >&2
   fi
 
   if ! need_cmd cursor-agent; then
@@ -255,12 +255,6 @@ install_agents() {
     echo "  WARN  uv or pipx missing; skipping Hermes install" >&2
   fi
 
-  if ! need_cmd goose; then
-    run_shell 'curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash'
-  else
-    echo "  ok  goose already installed"
-  fi
-
   if ! need_cmd agy; then
     run_shell 'curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir "$HOME/.local/bin"'
   else
@@ -288,7 +282,7 @@ install_tmux_agent() {
   run mkdir -p "$LOCAL_BIN"
   run install -m 755 "$source" "${LOCAL_BIN}/tmux-agent"
   local name
-  for name in pilot codex-tmux claude-tmux cline-tmux cursor-tmux gemini-tmux goose-tmux agy-tmux antigravity-tmux pi-tmux hermes-tmux opencode-tmux; do
+  for name in pilot codex-tmux claude-tmux cline-tmux cursor-tmux agy-tmux antigravity-tmux pi-tmux hermes-tmux opencode-tmux; do
     run ln -sfn tmux-agent "${LOCAL_BIN}/${name}"
   done
 }
@@ -347,8 +341,6 @@ Interactive auth:
   claude auth login
   cline auth cline
   cursor-agent login
-  gemini
-  goose configure
   agy
 
 Tailscale:
@@ -359,8 +351,6 @@ Recommended verification:
   claude auth status --text
   cline version
   cursor-agent status
-  gemini --version
-  goose --version
   agy --version
   pi --version
   hermes --version
@@ -373,8 +363,6 @@ Stable tmux launchers:
   claude-tmux
   cline-tmux
   cursor-tmux
-  gemini-tmux
-  goose-tmux
   agy-tmux
   pi-tmux
   hermes-tmux

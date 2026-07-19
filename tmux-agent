@@ -4,14 +4,12 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 usage:
-  tmux-agent <pilot|codex|claude|cline|cursor|gemini|goose|agy|pi|hermes|opencode> [agent args...]
+  tmux-agent <pilot|codex|claude|cline|cursor|agy|pi|hermes|opencode> [agent args...]
   pilot [shell args...]
   codex-tmux [codex args...]
   claude-tmux [claude args...]
   cline-tmux [cline args...]
   cursor-tmux [cursor-agent args...]
-  gemini-tmux [gemini args...]
-  goose-tmux [goose args...]
   agy-tmux [agy args...]
   pi-tmux [pi args...]
   hermes-tmux [hermes args...]
@@ -28,8 +26,6 @@ case "$prog" in
   claude-tmux) set -- claude "$@" ;;
   cline-tmux) set -- cline "$@" ;;
   cursor-tmux) set -- cursor "$@" ;;
-  gemini-tmux) set -- gemini "$@" ;;
-  goose-tmux) set -- goose "$@" ;;
   agy-tmux|antigravity-tmux) set -- agy "$@" ;;
   pi-tmux) set -- pi "$@" ;;
   hermes-tmux) set -- hermes "$@" ;;
@@ -98,16 +94,6 @@ case "$target" in
     session="${session_prefix}-cursor"
     window="cursor"
     mapfile -d '' -t cmd < <(cursor_args "$@")
-    ;;
-  gemini)
-    session="${session_prefix}-gemini"
-    window="gemini"
-    cmd=(gemini "$@")
-    ;;
-  goose)
-    session="${session_prefix}-goose"
-    window="goose"
-    cmd=(goose "$@")
     ;;
   agy)
     session="${session_prefix}-agy"

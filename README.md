@@ -48,7 +48,7 @@ Preview first:
 ./setup-cloud-agent-machine.sh --dry-run
 ```
 
-This installs base dev packages, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Gemini CLI, Goose, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
+This installs base dev packages, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
 
 Credentials stay explicit:
 
@@ -60,8 +60,6 @@ codex login
 claude auth login
 cline auth cline
 cursor-agent login
-gemini
-goose configure
 agy
 ```
 
@@ -86,8 +84,6 @@ codex-tmux
 claude-tmux
 cline-tmux
 cursor-tmux
-gemini-tmux
-goose-tmux
 agy-tmux
 pi-tmux
 hermes-tmux
