@@ -175,7 +175,46 @@ tailscale ip -6
 ssh cloud-agent
 ```
 
-## 6. Firewall And SSH Hardening
+## 6. Git And GitHub
+
+The cloud bootstrap installs GitHub CLI and configures baseline Git settings:
+
+```bash
+git config --global user.name <git-display-name>
+git config --global user.email <github-noreply-email>
+git config --global init.defaultBranch main
+git config --global url.git@github.com:.insteadOf https://github.com/
+```
+
+Do not copy a laptop GitHub token or laptop SSH private key to the cloud host.
+Use a separate SSH key and separate `gh` login per host, so access can be
+revoked per machine.
+
+From the agent user on each host:
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github -C "$(hostname)-github" -N ""
+
+gh auth login --hostname github.com --git-protocol ssh --web
+gh ssh-key add ~/.ssh/id_ed25519_github.pub --title "$(hostname)-agent"
+gh auth setup-git --hostname github.com
+```
+
+Verify:
+
+```bash
+gh auth status
+ssh -T git@github.com
+gh repo view <owner>/<repo>
+git ls-remote git@github.com:<owner>/<repo>.git HEAD
+```
+
+If prompted to trust GitHub's SSH host key, verify the fingerprint against
+GitHub's published fingerprints before accepting it.
+
+## 7. Firewall And SSH Hardening
 
 Only do this after:
 
@@ -200,7 +239,7 @@ Options:
 Avoid disabling the last working admin path. For a new machine, prefer proving
 Tailscale access first, then moving to Tailscale-only SSH.
 
-## 7. Secret Store
+## 8. Secret Store
 
 For Linux hosts, use `pass` for Cline Pass API keys used by Pi, Hermes, and
 opencode.
@@ -236,7 +275,7 @@ pass show agents/cline-pass/opencode >/dev/null
 Keep the private GPG key backup and password store backup outside this public
 repo.
 
-## 8. Agent Authentication
+## 9. Agent Authentication
 
 Run OAuth/device-code flows interactively on the remote host:
 
@@ -266,7 +305,7 @@ cline --json --auto-approve false -P cline -t 60 'Reply exactly CLINE_OK'
 agy --print 'Reply exactly AGY_OK'
 ```
 
-## 9. Cline Pass Adapters
+## 10. Cline Pass Adapters
 
 The cloud bootstrap calls this by default:
 
@@ -285,7 +324,7 @@ hermes --provider cline-pass -m cline-pass/glm-5.2 -z 'Reply exactly GLM_OK'
 opencode run -m cline-pass/glm-5.2 'Reply exactly GLM_OK'
 ```
 
-## 10. tmux Launchers
+## 11. tmux Launchers
 
 Use stable wrappers instead of directly starting each tool:
 
@@ -304,7 +343,7 @@ opencode-tmux
 These create or attach named tmux sessions, which is useful from both laptop and
 phone SSH clients.
 
-## 11. Phone SSH
+## 12. Phone SSH
 
 Add the phone SSH public key to the agent user's `authorized_keys`.
 
@@ -325,7 +364,7 @@ Recommended phone SSH profile:
 
 Do not give the phone admin SSH unless there is a concrete need.
 
-## 12. IPv6-only Client NAT64/DNS64
+## 13. IPv6-only Client NAT64/DNS64
 
 If a cloud VM has IPv6 only, some provider auth/install/API endpoints may still
 be IPv4-only. Use an existing IPv4-capable Tailscale node as a NAT64 gateway:
@@ -360,12 +399,16 @@ Expected behavior:
 - unauthenticated provider API probes return an HTTP error like `401`, not a
   network connection failure
 
-## 13. Final Smoke Test
+## 14. Final Smoke Test
 
 Run this from the agent user:
 
 ```bash
 codex login status
+gh auth status
+ssh -T git@github.com
+git ls-remote git@github.com:<owner>/<repo>.git HEAD
+
 claude auth status --text
 cursor-agent status
 
@@ -390,7 +433,7 @@ agy-tmux
 
 Detach with the tmux prefix, then `d`.
 
-## 14. Rollback Notes
+## 15. Rollback Notes
 
 Firewall:
 

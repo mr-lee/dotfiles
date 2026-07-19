@@ -8,6 +8,9 @@ INSTALL_SYSTEM=true
 INSTALL_TAILSCALE=true
 TAILSCALE_UP=false
 LINGER_USER=""
+CONFIGURE_GIT=true
+GIT_USER_NAME="Matt Lee"
+GIT_USER_EMAIL="mr-lee@users.noreply.github.com"
 INSTALL_AGENTS=true
 CONFIGURE_CLINE_PASS=true
 INSTALL_TMUX_AGENT=true
@@ -24,6 +27,7 @@ Credential-free bootstrap for an agentic cloud dev machine.
 
 Defaults:
   - install Ubuntu/Debian base packages when apt/sudo are available
+  - install GitHub CLI and configure baseline Git identity/remotes
   - install Tailscale and Mosh, but do not run tailscale up unless requested
   - install Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, and opencode
   - configure Cline Pass adapters for Pi, Hermes, and opencode
@@ -36,10 +40,13 @@ Options:
   --tailscale-hostname NAME    Hostname for optional tailscale up
   --tailscale-up               Run sudo tailscale up after installing Tailscale
   --linger-user USER           Enable systemd user lingering for persistent agent/GPG sessions
+  --git-user-name NAME         Git user.name (default: Matt Lee)
+  --git-user-email EMAIL       Git user.email (default: mr-lee@users.noreply.github.com)
   --enable-firewall            Enable UFW: deny incoming, allow outgoing, allow public SSH and Tailscale SSH/Mosh
   --tailscale-only-ssh         Enable UFW with SSH/Mosh allowed only on tailscale0
   --harden-ssh                 Disable password/kbd-interactive/root SSH in sshd_config.d
   --no-system                  Skip apt/system package installation
+  --no-git-config              Skip baseline Git configuration
   --no-tailscale               Skip Tailscale installation
   --no-agents                  Skip agent CLI installation
   --no-cline-pass              Skip Cline Pass adapter configuration
@@ -74,6 +81,14 @@ while [[ $# -gt 0 ]]; do
       LINGER_USER="$2"
       shift 2
       ;;
+    --git-user-name)
+      GIT_USER_NAME="$2"
+      shift 2
+      ;;
+    --git-user-email)
+      GIT_USER_EMAIL="$2"
+      shift 2
+      ;;
     --enable-firewall)
       ENABLE_FIREWALL=true
       shift
@@ -89,6 +104,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-system)
       INSTALL_SYSTEM=false
+      shift
+      ;;
+    --no-git-config)
+      CONFIGURE_GIT=false
       shift
       ;;
     --no-tailscale)
@@ -220,6 +239,8 @@ install_system_packages() {
     libsecret-1-0 libsecret-tools mosh pass pipx python3 python3-yaml ripgrep \
     tmux ufw unzip xz-utils
 
+  install_github_cli
+
   if ! need_cmd fd && need_cmd fdfind && [[ ! -e "${LOCAL_BIN}/fd" ]]; then
     run mkdir -p "$LOCAL_BIN"
     run ln -s "$(command -v fdfind)" "${LOCAL_BIN}/fd"
@@ -231,6 +252,29 @@ install_system_packages() {
     run "${SUDO[@]}" apt-get update
     run "${SUDO[@]}" apt-get install -y nodejs
   fi
+}
+
+install_github_cli() {
+  if need_cmd gh; then
+    echo "  ok  gh already installed"
+    return
+  fi
+  if ! has_apt; then
+    echo "  skip gh: apt-get not found"
+    return
+  fi
+
+  if run "${SUDO[@]}" apt-get install -y gh; then
+    return
+  fi
+
+  echo "  gh package not available from current apt sources; adding GitHub CLI apt repository"
+  run "${SUDO[@]}" mkdir -p -m 755 /etc/apt/keyrings
+  run_shell 'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null'
+  run "${SUDO[@]}" chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+  run_shell 'echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null'
+  run "${SUDO[@]}" apt-get update
+  run "${SUDO[@]}" apt-get install -y gh
 }
 
 install_tailscale() {
@@ -255,6 +299,18 @@ enable_user_linger() {
   fi
 
   run "${SUDO[@]}" loginctl enable-linger "$LINGER_USER"
+}
+
+configure_git() {
+  if ! need_cmd git; then
+    echo "  skip git config: git not found"
+    return
+  fi
+
+  run git config --global user.name "$GIT_USER_NAME"
+  run git config --global user.email "$GIT_USER_EMAIL"
+  run git config --global init.defaultBranch main
+  run git config --global url.git@github.com:.insteadOf https://github.com/
 }
 
 install_agents() {
@@ -396,12 +452,20 @@ Interactive auth:
   cursor-agent login
   agy
 
+GitHub auth:
+  ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github -C "\$(hostname)-github" -N ""
+  gh auth login --hostname github.com --git-protocol ssh --web
+  gh ssh-key add ~/.ssh/id_ed25519_github.pub --title "\$(hostname)-agent"
+  gh auth setup-git --hostname github.com
+
 Tailscale:
   sudo tailscale up --hostname ${TAILSCALE_HOSTNAME}
 
 Recommended verification:
   codex login status
   claude auth status --text
+  gh auth status
+  ssh -T git@github.com
   cline version
   cursor-agent status
   agy --version
@@ -443,6 +507,12 @@ if [[ "$INSTALL_TAILSCALE" == true ]]; then
   echo
   echo "Tailscale"
   install_tailscale
+fi
+
+if [[ "$CONFIGURE_GIT" == true ]]; then
+  echo
+  echo "Git"
+  configure_git
 fi
 
 if [[ -n "$LINGER_USER" ]]; then

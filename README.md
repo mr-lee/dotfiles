@@ -51,11 +51,15 @@ Preview first:
 ./setup-cloud-agent-machine.sh --dry-run
 ```
 
-This installs base dev packages, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
+This installs base dev packages, GitHub CLI, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
 
 Credentials stay explicit:
 
 ```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github -C "$(hostname)-github" -N ""
+gh auth login --hostname github.com --git-protocol ssh --web
+gh ssh-key add ~/.ssh/id_ed25519_github.pub --title "$(hostname)-agent"
+gh auth setup-git --hostname github.com
 pass insert agents/cline-pass/pi
 pass insert agents/cline-pass/hermes
 pass insert agents/cline-pass/opencode
