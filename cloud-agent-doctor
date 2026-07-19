@@ -6,6 +6,8 @@ REPO="git@github.com:mr-lee/dotfiles.git"
 FULL=false
 CHECK_NETWORK=true
 
+export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.npm-global/bin:$HOME/.grok/bin:$PATH"
+
 usage() {
   cat <<'EOF'
 usage: cloud-agent-doctor [options]
@@ -246,10 +248,13 @@ echo
 echo "Secrets"
 if have pass; then
   for entry in "${PASS_PREFIX}/pi" "${PASS_PREFIX}/hermes" "${PASS_PREFIX}/opencode"; do
-    if run_timeout 15 pass show "$entry" >/dev/null 2>&1; then
-      ok "pass ${entry}"
+    pass_file="$HOME/.password-store/${entry}.gpg"
+    if [[ ! -f "$pass_file" ]]; then
+      fail "pass ${entry}" "encrypted entry missing"
+    elif run_timeout 5 gpg --batch --quiet --decrypt "$pass_file" >/dev/null 2>&1; then
+      ok "pass ${entry}" "encrypted entry present and decryptable"
     else
-      fail "pass ${entry}" "missing, locked, or unreadable"
+      warn "pass ${entry}" "encrypted entry present; GPG agent locked or non-interactive"
     fi
   done
 else
