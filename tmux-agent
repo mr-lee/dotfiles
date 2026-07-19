@@ -128,6 +128,10 @@ if ! command -v tmux >/dev/null 2>&1; then
 fi
 
 export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.npm-global/bin:$HOME/.grok/bin:$PATH"
+if command -v gpg-connect-agent >/dev/null 2>&1 && [ -t 0 ]; then
+  export GPG_TTY="$(tty)"
+  gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true
+fi
 
 if tmux has-session -t "$session" 2>/dev/null; then
   if [ -n "${TMUX:-}" ]; then
@@ -141,7 +145,8 @@ for arg in "${cmd[@]}"; do
   printf -v quoted '%q' "$arg"
   cmd_string+="${quoted} "
 done
-cmd_string='export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.npm-global/bin:$HOME/.grok/bin:$PATH"; exec '"$cmd_string"
+gpg_tty_prelude='if command -v gpg-connect-agent >/dev/null 2>&1 && [ -t 0 ]; then export GPG_TTY="$(tty)"; gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true; fi'
+cmd_string='export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.npm-global/bin:$HOME/.grok/bin:$PATH"; '"$gpg_tty_prelude"'; exec '"$cmd_string"
 
 if [ -n "${TMUX:-}" ]; then
   tmux new-session -d -s "$session" -n "$window" "$cmd_string"

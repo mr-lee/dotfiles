@@ -178,6 +178,30 @@ ensure_path_block() {
   } >> "$file"
 }
 
+ensure_gpg_tty_block() {
+  local file="$1"
+  local begin="# >>> cloud-agent-machine gpg tty"
+  local end="# <<< cloud-agent-machine gpg tty"
+
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "  ensure GPG_TTY block in ${file}"
+    return
+  fi
+
+  touch "$file"
+  if grep -qxF "$begin" "$file"; then
+    return
+  fi
+  {
+    printf '\n%s\n' "$begin"
+    printf '%s\n' 'if command -v gpg-connect-agent >/dev/null 2>&1 && [ -t 0 ]; then'
+    printf '%s\n' '  export GPG_TTY="$(tty)"'
+    printf '%s\n' '  gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1 || true'
+    printf '%s\n' 'fi'
+    printf '%s\n' "$end"
+  } >> "$file"
+}
+
 install_system_packages() {
   if ! has_apt; then
     echo "  skip system packages: apt-get not found"
@@ -220,8 +244,10 @@ install_agents() {
   export PATH="${LOCAL_BIN}:${TARGET_DIR}/.opencode/bin:${TARGET_DIR}/.npm-global/bin:${TARGET_DIR}/.grok/bin:${PATH}"
 
   ensure_path_block "${TARGET_DIR}/.profile"
+  ensure_gpg_tty_block "${TARGET_DIR}/.profile"
   if [[ -e "${TARGET_DIR}/.bashrc" || ! -e "${TARGET_DIR}/.zshrc" ]]; then
     ensure_path_block "${TARGET_DIR}/.bashrc"
+    ensure_gpg_tty_block "${TARGET_DIR}/.bashrc"
   fi
 
   if need_cmd npm; then
