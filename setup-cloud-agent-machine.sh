@@ -11,6 +11,7 @@ INSTALL_AGENTS=true
 CONFIGURE_CLINE_PASS=true
 INSTALL_TMUX_AGENT=true
 ENABLE_FIREWALL=false
+TAILSCALE_ONLY_SSH=false
 HARDEN_SSH=false
 DRY_RUN=false
 
@@ -33,7 +34,8 @@ Options:
   --pass-prefix PREFIX         pass(1) prefix for Linux secrets (default: agents/cline-pass)
   --tailscale-hostname NAME    Hostname for optional tailscale up
   --tailscale-up               Run sudo tailscale up after installing Tailscale
-  --enable-firewall            Enable UFW: deny incoming, allow outgoing, allow SSH, allow Tailscale SSH/Mosh
+  --enable-firewall            Enable UFW: deny incoming, allow outgoing, allow public SSH and Tailscale SSH/Mosh
+  --tailscale-only-ssh         Enable UFW with SSH/Mosh allowed only on tailscale0
   --harden-ssh                 Disable password/kbd-interactive/root SSH in sshd_config.d
   --no-system                  Skip apt/system package installation
   --no-tailscale               Skip Tailscale installation
@@ -68,6 +70,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --enable-firewall)
       ENABLE_FIREWALL=true
+      shift
+      ;;
+    --tailscale-only-ssh)
+      ENABLE_FIREWALL=true
+      TAILSCALE_ONLY_SSH=true
       shift
       ;;
     --harden-ssh)
@@ -295,7 +302,9 @@ enable_firewall() {
 
   run "${SUDO[@]}" ufw default deny incoming
   run "${SUDO[@]}" ufw default allow outgoing
-  run "${SUDO[@]}" ufw allow 22/tcp comment "SSH key auth"
+  if [[ "$TAILSCALE_ONLY_SSH" != true ]]; then
+    run "${SUDO[@]}" ufw allow 22/tcp comment "SSH key auth"
+  fi
   run "${SUDO[@]}" ufw allow in on tailscale0 to any port 22 proto tcp comment "SSH over Tailscale"
   run "${SUDO[@]}" ufw allow in on tailscale0 to any port 60000:61000 proto udp comment "Mosh over Tailscale"
   run "${SUDO[@]}" ufw --force enable
@@ -370,6 +379,7 @@ Stable tmux launchers:
 
 Firewall/SSH hardening is opt-in:
   ./setup-cloud-agent-machine.sh --enable-firewall
+  ./setup-cloud-agent-machine.sh --tailscale-only-ssh
   ./setup-cloud-agent-machine.sh --harden-ssh
 EOF
 }

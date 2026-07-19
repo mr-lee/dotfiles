@@ -73,6 +73,7 @@ Firewall and SSH hardening are opt-in, so a new SSH session is not surprise-lock
 
 ```bash
 ./setup-cloud-agent-machine.sh --enable-firewall
+./setup-cloud-agent-machine.sh --tailscale-only-ssh
 ./setup-cloud-agent-machine.sh --harden-ssh
 ```
 
