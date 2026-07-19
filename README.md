@@ -69,6 +69,12 @@ Tailscale login is also explicit:
 sudo tailscale up --hostname <name>
 ```
 
+For headless agent users, enable systemd lingering so tmux and GPG/pass cache state can survive SSH logout:
+
+```bash
+sudo ./setup-cloud-agent-machine.sh --no-system --no-tailscale --no-agents --no-cline-pass --no-tmux-agent --linger-user agentdev
+```
+
 Firewall and SSH hardening are opt-in, so a new SSH session is not surprise-locked:
 
 ```bash

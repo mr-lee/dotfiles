@@ -7,6 +7,7 @@ TAILSCALE_HOSTNAME="${HOSTNAME:-agentdev}"
 INSTALL_SYSTEM=true
 INSTALL_TAILSCALE=true
 TAILSCALE_UP=false
+LINGER_USER=""
 INSTALL_AGENTS=true
 CONFIGURE_CLINE_PASS=true
 INSTALL_TMUX_AGENT=true
@@ -34,6 +35,7 @@ Options:
   --pass-prefix PREFIX         pass(1) prefix for Linux secrets (default: agents/cline-pass)
   --tailscale-hostname NAME    Hostname for optional tailscale up
   --tailscale-up               Run sudo tailscale up after installing Tailscale
+  --linger-user USER           Enable systemd user lingering for persistent agent/GPG sessions
   --enable-firewall            Enable UFW: deny incoming, allow outgoing, allow public SSH and Tailscale SSH/Mosh
   --tailscale-only-ssh         Enable UFW with SSH/Mosh allowed only on tailscale0
   --harden-ssh                 Disable password/kbd-interactive/root SSH in sshd_config.d
@@ -67,6 +69,10 @@ while [[ $# -gt 0 ]]; do
     --tailscale-up)
       TAILSCALE_UP=true
       shift
+      ;;
+    --linger-user)
+      LINGER_USER="$2"
+      shift 2
       ;;
     --enable-firewall)
       ENABLE_FIREWALL=true
@@ -237,6 +243,18 @@ install_tailscale() {
   if [[ "$TAILSCALE_UP" == true ]]; then
     run "${SUDO[@]}" tailscale up --hostname "$TAILSCALE_HOSTNAME"
   fi
+}
+
+enable_user_linger() {
+  if [[ -z "$LINGER_USER" ]]; then
+    return
+  fi
+  if ! need_cmd loginctl; then
+    echo "  skip linger: loginctl not found"
+    return
+  fi
+
+  run "${SUDO[@]}" loginctl enable-linger "$LINGER_USER"
 }
 
 install_agents() {
@@ -425,6 +443,12 @@ if [[ "$INSTALL_TAILSCALE" == true ]]; then
   echo
   echo "Tailscale"
   install_tailscale
+fi
+
+if [[ -n "$LINGER_USER" ]]; then
+  echo
+  echo "User linger"
+  enable_user_linger
 fi
 
 if [[ "$INSTALL_AGENTS" == true ]]; then
