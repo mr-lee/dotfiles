@@ -15,6 +15,9 @@ Personal dotfiles for macOS/Linux. Managed with symlinks, no framework.
 | `setup-cline-pass-agents.sh` | Credential-free bootstrap for Cline Pass provider config in Pi, Hermes, and opencode |
 | `setup-cloud-agent-machine.sh` | Credential-free Ubuntu/Debian cloud dev bootstrap for agents, Tailscale, Mosh, and tmux launchers |
 | `setup-tailscale-nat64.sh` | Two-host Tailscale NAT64/DNS64 setup for IPv6-only cloud agents |
+| `cloud-agent-doctor` | Public-safe cloud host health check with optional tiny model probes |
+| `cloud-agent-update` | Day-2 update helper for dotfiles-managed cloud agent hosts |
+| `agent-workspace` | Workspace/scratch/log directory helper and tmux launcher for repos |
 | `tmux-agent` | Stable tmux launcher for `pilot`, Codex, Claude, Cline, Cursor, Gemini, Goose, Antigravity, Pi, Hermes, and opencode |
 
 ## Install
@@ -40,7 +43,7 @@ Detailed rebuild steps are in [docs/cloud-agent-runbook.md](docs/cloud-agent-run
 On a fresh Ubuntu/Debian cloud user:
 
 ```bash
-git clone https://github.com/mr-lee/dotfiles.git ~/dotfiles
+GIT_CONFIG_GLOBAL=/dev/null git clone https://github.com/mr-lee/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./setup-cloud-agent-machine.sh
 ```
@@ -51,7 +54,7 @@ Preview first:
 ./setup-cloud-agent-machine.sh --dry-run
 ```
 
-This installs base dev packages, GitHub CLI, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, and stable tmux launchers. It does not write credentials.
+This installs base dev packages, GitHub CLI, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, stable tmux launchers, and cloud helper commands. It does not write credentials.
 
 Credentials stay explicit:
 
@@ -105,6 +108,17 @@ agy-tmux
 pi-tmux
 hermes-tmux
 opencode-tmux
+```
+
+Cloud helpers:
+
+```bash
+cloud-agent-doctor          # quick health check
+cloud-agent-doctor --full   # includes tiny model probes
+cloud-agent-update          # pull dotfiles, refresh tools, run doctor
+agent-workspace init
+agent-workspace clone <owner/repo>
+agent-workspace open <repo> pilot
 ```
 
 ### IPv6-only clients

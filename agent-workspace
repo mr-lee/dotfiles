@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WORKSPACE_DIR="${AGENT_WORKSPACE_DIR:-${HOME}/workspace}"
+SCRATCH_DIR="${AGENT_SCRATCH_DIR:-${HOME}/scratch}"
+LOG_DIR="${AGENT_LOG_DIR:-${HOME}/logs/agents}"
+
+usage() {
+  cat <<'EOF'
+usage:
+  agent-workspace init
+  agent-workspace list
+  agent-workspace path <workspace|scratch|logs>
+  agent-workspace clone <owner/repo|git-url|https-url> [name]
+  agent-workspace scratch [name]
+  agent-workspace open <path-or-name> [pilot|codex|claude|cline|cursor|agy|pi|hermes|opencode] [agent args...]
+
+Conventions:
+  ~/workspace/<repo>       durable cloned repositories
+  ~/scratch/<name>         experiments and throwaway work
+  ~/logs/agents            logs and exported agent artifacts
+
+Environment overrides:
+  AGENT_WORKSPACE_DIR
+  AGENT_SCRATCH_DIR
+  AGENT_LOG_DIR
+EOF
+}
+
+die() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+ensure_dirs() {
+  mkdir -p "$WORKSPACE_DIR" "$SCRATCH_DIR" "$LOG_DIR"
+}
+
+repo_name_from_spec() {
+  local spec="$1"
+  local name
+  name="${spec##*/}"
+  name="${name%.git}"
+  printf '%s\n' "$name"
+}
+
+resolve_dir() {
+  local value="$1"
+  if [[ -d "$value" ]]; then
+    cd "$value" && pwd
+    return
+  fi
+  if [[ -d "${WORKSPACE_DIR}/${value}" ]]; then
+    cd "${WORKSPACE_DIR}/${value}" && pwd
+    return
+  fi
+  if [[ -d "${SCRATCH_DIR}/${value}" ]]; then
+    cd "${SCRATCH_DIR}/${value}" && pwd
+    return
+  fi
+  return 1
+}
+
+clone_repo() {
+  local spec="$1"
+  local name="${2:-}"
+  ensure_dirs
+
+  if [[ -z "$name" ]]; then
+    name="$(repo_name_from_spec "$spec")"
+  fi
+  local dest="${WORKSPACE_DIR}/${name}"
+  if [[ -e "$dest" ]]; then
+    die "destination already exists: ${dest}"
+  fi
+
+  case "$spec" in
+    git@*|ssh://*|https://*|http://*)
+      git clone "$spec" "$dest"
+      ;;
+    */*)
+      if command -v gh >/dev/null 2>&1; then
+        gh repo clone "$spec" "$dest"
+      else
+        git clone "git@github.com:${spec}.git" "$dest"
+      fi
+      ;;
+    *)
+      die "repo must be owner/repo or a git/http URL"
+      ;;
+  esac
+  printf '%s\n' "$dest"
+}
+
+make_scratch() {
+  ensure_dirs
+  local name="${1:-$(date +%Y%m%d-%H%M%S)}"
+  local dir="${SCRATCH_DIR}/${name}"
+  mkdir -p "$dir"
+  printf '%s\n' "$dir"
+}
+
+agent_command() {
+  local agent="$1"
+  shift
+  case "$agent" in
+    pilot)
+      if [[ "$#" -eq 0 ]]; then
+        printf '%s\0' "${SHELL:-/bin/bash}" -l
+      else
+        printf '%s\0' "$@"
+      fi
+      ;;
+    codex) printf '%s\0' codex "$@" ;;
+    claude) printf '%s\0' claude "$@" ;;
+    cline) printf '%s\0' cline "$@" ;;
+    cursor) printf '%s\0' cursor-agent "$@" ;;
+    agy) printf '%s\0' agy "$@" ;;
+    pi) printf '%s\0' pi "$@" ;;
+    hermes) printf '%s\0' hermes "$@" ;;
+    opencode) printf '%s\0' opencode "$@" ;;
+    *) die "unknown agent: ${agent}" ;;
+  esac
+}
+
+open_workspace() {
+  local value="$1"
+  shift
+  local agent="${1:-pilot}"
+  if [[ "$#" -gt 0 ]]; then
+    shift
+  fi
+
+  local dir
+  dir="$(resolve_dir "$value")" || die "workspace not found: ${value}"
+
+  if ! command -v tmux >/dev/null 2>&1; then
+    die "tmux is required"
+  fi
+
+  local base
+  base="$(basename "$dir" | tr -c '[:alnum:]_.-' '-')"
+  local session="work-${base}-${agent}"
+  local window="$agent"
+  local -a cmd
+  mapfile -d '' -t cmd < <(agent_command "$agent" "$@")
+
+  if tmux has-session -t "$session" 2>/dev/null; then
+    if [[ -n "${TMUX:-}" ]]; then
+      exec tmux switch-client -t "$session"
+    fi
+    exec tmux attach -t "$session"
+  fi
+
+  local cmd_string=""
+  local arg quoted
+  for arg in "${cmd[@]}"; do
+    printf -v quoted '%q' "$arg"
+    cmd_string+="${quoted} "
+  done
+  cmd_string='export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$HOME/.npm-global/bin:$HOME/.grok/bin:$PATH"; exec '"$cmd_string"
+
+  if [[ -n "${TMUX:-}" ]]; then
+    tmux new-session -d -s "$session" -n "$window" -c "$dir" "$cmd_string"
+    exec tmux switch-client -t "$session"
+  fi
+
+  exec tmux new-session -s "$session" -n "$window" -c "$dir" "$cmd_string"
+}
+
+case "${1:-}" in
+  -h|--help|"")
+    usage
+    exit 0
+    ;;
+  init)
+    ensure_dirs
+    printf '%s\n' "$WORKSPACE_DIR" "$SCRATCH_DIR" "$LOG_DIR"
+    ;;
+  list)
+    ensure_dirs
+    find "$WORKSPACE_DIR" "$SCRATCH_DIR" -mindepth 1 -maxdepth 1 -type d | sort
+    ;;
+  path)
+    case "${2:-}" in
+      workspace) printf '%s\n' "$WORKSPACE_DIR" ;;
+      scratch) printf '%s\n' "$SCRATCH_DIR" ;;
+      logs) printf '%s\n' "$LOG_DIR" ;;
+      *) die "path target must be workspace, scratch, or logs" ;;
+    esac
+    ;;
+  clone)
+    [[ $# -ge 2 ]] || die "clone requires a repo"
+    clone_repo "$2" "${3:-}"
+    ;;
+  scratch)
+    make_scratch "${2:-}"
+    ;;
+  open)
+    [[ $# -ge 2 ]] || die "open requires a path or workspace name"
+    target="$2"
+    shift 2
+    open_workspace "$target" "$@"
+    ;;
+  *)
+    die "unknown command: $1"
+    ;;
+esac

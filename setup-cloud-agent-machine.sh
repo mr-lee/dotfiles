@@ -14,6 +14,7 @@ GIT_USER_EMAIL="mr-lee@users.noreply.github.com"
 INSTALL_AGENTS=true
 CONFIGURE_CLINE_PASS=true
 INSTALL_TMUX_AGENT=true
+INSTALL_CLOUD_HELPERS=true
 ENABLE_FIREWALL=false
 TAILSCALE_ONLY_SSH=false
 HARDEN_SSH=false
@@ -32,6 +33,7 @@ Defaults:
   - install Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, and opencode
   - configure Cline Pass adapters for Pi, Hermes, and opencode
   - install tmux-agent wrappers for stable phone/laptop sessions
+  - install cloud-agent-doctor, cloud-agent-update, and agent-workspace helpers
   - do not enable firewall or rewrite sshd settings unless explicitly requested
 
 Options:
@@ -51,6 +53,7 @@ Options:
   --no-agents                  Skip agent CLI installation
   --no-cline-pass              Skip Cline Pass adapter configuration
   --no-tmux-agent              Skip tmux-agent wrapper installation
+  --no-cloud-helpers           Skip cloud-agent-doctor/update/workspace helpers
   --dry-run                    Print commands without changing the machine
   -h, --help                   Show this help
 
@@ -124,6 +127,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-tmux-agent)
       INSTALL_TMUX_AGENT=false
+      shift
+      ;;
+    --no-cloud-helpers)
+      INSTALL_CLOUD_HELPERS=false
       shift
       ;;
     --dry-run)
@@ -431,6 +438,20 @@ install_tmux_agent() {
   done
 }
 
+install_cloud_helpers() {
+  run mkdir -p "$LOCAL_BIN"
+
+  local helper
+  for helper in cloud-agent-doctor cloud-agent-update agent-workspace; do
+    local source="${SCRIPT_DIR}/${helper}"
+    if [[ -f "$source" ]]; then
+      run install -m 755 "$source" "${LOCAL_BIN}/${helper}"
+    else
+      echo "  WARN  ${helper} not found next to setup script; skipping" >&2
+    fi
+  done
+}
+
 enable_firewall() {
   if ! need_cmd ufw; then
     echo "  skip firewall: ufw not found"
@@ -510,6 +531,8 @@ Recommended verification:
   hermes --version
   opencode --version
   tmux-agent --help
+  cloud-agent-doctor
+  agent-workspace init
 
 Stable tmux launchers:
   pilot
@@ -521,6 +544,11 @@ Stable tmux launchers:
   pi-tmux
   hermes-tmux
   opencode-tmux
+
+Workspace conventions:
+  agent-workspace init
+  agent-workspace clone <owner/repo>
+  agent-workspace open <repo> pilot
 
 Firewall/SSH hardening is opt-in:
   ./setup-cloud-agent-machine.sh --enable-firewall
@@ -574,6 +602,12 @@ if [[ "$INSTALL_TMUX_AGENT" == true ]]; then
   echo
   echo "tmux-agent"
   install_tmux_agent
+fi
+
+if [[ "$INSTALL_CLOUD_HELPERS" == true ]]; then
+  echo
+  echo "Cloud helpers"
+  install_cloud_helpers
 fi
 
 if [[ "$ENABLE_FIREWALL" == true ]]; then

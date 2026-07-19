@@ -17,6 +17,8 @@ OAuth flows, or another secret store.
 - Tailscale for stable private connectivity
 - Optional UFW firewall and SSH hardening
 - `tmux-agent` wrappers for stable long-running agent sessions
+- `agent-workspace` conventions for durable repos, scratch work, and logs
+- `cloud-agent-doctor` and `cloud-agent-update` for day-2 checks and updates
 - Agent CLIs:
   - Codex
   - Claude Code
@@ -220,6 +222,27 @@ git ls-remote git@github.com:<owner>/<repo>.git HEAD
 If prompted to trust GitHub's SSH host key, verify the fingerprint against
 GitHub's published fingerprints before accepting it.
 
+Permission refinement options:
+
+- Default personal host key: one SSH key and one `gh` login per cloud host. This
+  is the simplest useful setup. Revoke by deleting that host's SSH key and
+  logging out/revoking the host's GitHub token.
+- Repo deploy key: for a sensitive repository, create a separate SSH key and add
+  it as a repository deploy key. Use read-only unless that host needs to push to
+  that exact repo. This avoids broad account-level Git access but does not cover
+  general GitHub API operations.
+- Fine-grained token: use for narrow API access to selected repositories. Store
+  it in a secret manager, not dotfiles, and prefer environment injection for the
+  one command/session that needs it.
+- GitHub App or machine account: useful when this becomes shared automation
+  rather than personal agent work. Higher setup cost, tighter blast radius.
+
+References:
+
+- GitHub CLI auth: <https://cli.github.com/manual/gh_auth_login>
+- Deploy keys: <https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys>
+- Fine-grained token permissions: <https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens>
+
 ## 7. Firewall And SSH Hardening
 
 Only do this after:
@@ -280,6 +303,37 @@ pass show agents/cline-pass/opencode >/dev/null
 
 Keep the private GPG key backup and password store backup outside this public
 repo.
+
+Recommended backup pattern:
+
+```bash
+mkdir -p ~/secure-backups
+chmod 700 ~/secure-backups
+gpg --armor --export-secret-keys <gpg-key-id-or-fingerprint> \
+  | gpg --symmetric --cipher-algo AES256 \
+      -o ~/secure-backups/cloud-agent-pass-gpg-key.asc.gpg
+tar -C "$HOME" -cz .password-store \
+  | gpg --symmetric --cipher-algo AES256 \
+      -o ~/secure-backups/password-store.tar.gz.gpg
+```
+
+Store the encrypted GPG-key backup and password-store backup somewhere durable,
+such as a password manager attachment, encrypted drive, or other trusted backup
+system. Store the symmetric backup passphrase separately. Apple Keychain or a
+password manager is appropriate for the passphrase; avoid shell scripts that
+push raw private-key material into command arguments or committed files.
+
+Restore check on a disposable host or temporary `GNUPGHOME` before trusting the
+backup:
+
+```bash
+tmp_gnupg="$(mktemp -d)"
+chmod 700 "$tmp_gnupg"
+gpg --homedir "$tmp_gnupg" --decrypt ~/secure-backups/cloud-agent-pass-gpg-key.asc.gpg \
+  | gpg --homedir "$tmp_gnupg" --import
+GNUPGHOME="$tmp_gnupg" gpg --list-secret-keys
+rm -rf "$tmp_gnupg"
+```
 
 ## 9. Agent Authentication
 
@@ -349,7 +403,37 @@ opencode-tmux
 These create or attach named tmux sessions, which is useful from both laptop and
 phone SSH clients.
 
-## 12. Phone SSH
+## 12. Workspace Conventions
+
+Initialize standard directories:
+
+```bash
+agent-workspace init
+```
+
+Conventions:
+
+```text
+~/workspace/<repo>       durable cloned repositories
+~/scratch/<name>         experiments and throwaway work
+~/logs/agents            logs and exported agent artifacts
+```
+
+Common flows:
+
+```bash
+agent-workspace clone <owner/repo>
+agent-workspace scratch <name>
+agent-workspace open <repo> pilot
+agent-workspace open <repo> codex
+agent-workspace open <repo> claude
+agent-workspace list
+```
+
+`agent-workspace open` creates or attaches a repo-specific tmux session with the
+working directory set to that repo or scratch directory.
+
+## 13. Phone SSH
 
 Add the phone SSH public key to the agent user's `authorized_keys`.
 
@@ -370,7 +454,7 @@ Recommended phone SSH profile:
 
 Do not give the phone admin SSH unless there is a concrete need.
 
-## 13. IPv6-only Client NAT64/DNS64
+## 14. IPv6-only Client NAT64/DNS64
 
 If a cloud VM has IPv6 only, some provider auth/install/API endpoints may still
 be IPv4-only. Use an existing IPv4-capable Tailscale node as a NAT64 gateway:
@@ -405,11 +489,60 @@ Expected behavior:
 - unauthenticated provider API probes return an HTTP error like `401`, not a
   network connection failure
 
-## 14. Final Smoke Test
+## 15. Day-2 Operations
+
+Quick health check:
+
+```bash
+cloud-agent-doctor
+```
+
+Full check with tiny model probes:
+
+```bash
+cloud-agent-doctor --full
+```
+
+Routine update:
+
+```bash
+cloud-agent-update
+```
+
+System-inclusive update, which may prompt for sudo:
+
+```bash
+cloud-agent-update --system
+```
+
+Credential rotation:
+
+- GitHub: remove the old host SSH key in GitHub, generate a new
+  `~/.ssh/id_ed25519_github`, run `gh ssh-key add`, then verify with
+  `ssh -T git@github.com`.
+- Cline Pass keys: rotate provider-side key, update `pass` entries, then run
+  `cloud-agent-doctor --full`.
+- OAuth tools: use each tool's logout/login flow, then run the smoke tests.
+- Tailscale: expire/re-authenticate the device from the admin console or run
+  `sudo tailscale up` again when needed.
+
+Host replacement:
+
+1. Provision a fresh VM.
+2. Bootstrap dotfiles and Tailscale.
+3. Restore or re-create `pass`/GPG.
+4. Re-run OAuth and GitHub auth.
+5. Run `cloud-agent-doctor --full`.
+6. Revoke the old host's Tailscale device, GitHub SSH key, and any host-specific
+   provider tokens.
+
+## 16. Final Smoke Test
 
 Run this from the agent user:
 
 ```bash
+cloud-agent-doctor
+
 codex login status
 gh auth status
 ssh -T git@github.com
@@ -439,7 +572,7 @@ agy-tmux
 
 Detach with the tmux prefix, then `d`.
 
-## 15. Rollback Notes
+## 17. Rollback Notes
 
 Firewall:
 

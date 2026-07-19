@@ -1,0 +1,294 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+PASS_PREFIX="agents/cline-pass"
+REPO="git@github.com:mr-lee/dotfiles.git"
+FULL=false
+CHECK_NETWORK=true
+
+usage() {
+  cat <<'EOF'
+usage: cloud-agent-doctor [options]
+
+Check a cloud agent machine without printing secrets.
+
+Options:
+  --pass-prefix PREFIX   pass(1) prefix for Cline Pass entries (default: agents/cline-pass)
+  --repo REPO            Git remote used for read-only ls-remote check
+                         (default: git@github.com:mr-lee/dotfiles.git)
+  --full                 Run tiny model probes; this may incur provider usage
+  --no-network           Skip network checks
+  -h, --help             Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --pass-prefix)
+      PASS_PREFIX="$2"
+      shift 2
+      ;;
+    --repo)
+      REPO="$2"
+      shift 2
+      ;;
+    --full)
+      FULL=true
+      shift
+      ;;
+    --no-network)
+      CHECK_NETWORK=false
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+OK=0
+WARN=0
+FAIL=0
+SKIP=0
+
+line() {
+  local status="$1"
+  local name="$2"
+  local detail="${3:-}"
+  printf '[%s] %s' "$status" "$name"
+  if [[ -n "$detail" ]]; then
+    printf ': %s' "$detail"
+  fi
+  printf '\n'
+}
+
+ok() { OK=$((OK + 1)); line OK "$1" "${2:-}"; }
+warn() { WARN=$((WARN + 1)); line WARN "$1" "${2:-}"; }
+fail() { FAIL=$((FAIL + 1)); line FAIL "$1" "${2:-}"; }
+skip() { SKIP=$((SKIP + 1)); line SKIP "$1" "${2:-}"; }
+
+have() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+run_timeout() {
+  local seconds="$1"
+  shift
+  if have timeout; then
+    timeout "$seconds" "$@"
+  else
+    "$@"
+  fi
+}
+
+check_cmd() {
+  local cmd="$1"
+  if have "$cmd"; then
+    ok "command ${cmd}" "$(command -v "$cmd")"
+  else
+    fail "command ${cmd}" "missing"
+  fi
+}
+
+check_exit() {
+  local name="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then
+    ok "$name"
+  else
+    fail "$name"
+  fi
+}
+
+check_contains() {
+  local name="$1"
+  local pattern="$2"
+  shift 2
+  local output
+  output="$("$@" 2>&1)"
+  if printf '%s\n' "$output" | grep -Eq "$pattern"; then
+    ok "$name"
+  else
+    fail "$name" "$(printf '%s\n' "$output" | sed -n '1p')"
+  fi
+}
+
+echo "cloud-agent-doctor"
+echo
+
+if [[ -r /etc/os-release ]]; then
+  # shellcheck disable=SC1091
+  . /etc/os-release
+  ok "os" "${PRETTY_NAME:-unknown}"
+else
+  warn "os" "/etc/os-release missing"
+fi
+
+ok "user" "$(id -un)"
+ok "hostname" "$(hostname)"
+
+if have df; then
+  disk_line="$(df -h "$HOME" 2>/dev/null | awk 'NR==2 {print $5 " used on " $6}')"
+  ok "disk" "${disk_line:-unknown}"
+fi
+
+for cmd in git gh ssh tailscale tmux gpg pass codex claude cline cursor-agent agy pi hermes opencode; do
+  check_cmd "$cmd"
+done
+
+echo
+echo "GitHub"
+if have git; then
+  git_name="$(git config --global --get user.name 2>/dev/null || true)"
+  git_email="$(git config --global --get user.email 2>/dev/null || true)"
+  git_rewrite="$(git config --global --get url.git@github.com:.insteadOf 2>/dev/null || true)"
+  [[ -n "$git_name" ]] && ok "git user.name" "$git_name" || warn "git user.name" "not set"
+  [[ -n "$git_email" ]] && ok "git user.email" "$git_email" || warn "git user.email" "not set"
+  [[ "$git_rewrite" == "https://github.com/" ]] && ok "git GitHub URL rewrite" || warn "git GitHub URL rewrite" "not set"
+fi
+
+if [[ "$CHECK_NETWORK" == true ]] && have gh; then
+  if run_timeout 20 gh auth status >/dev/null 2>&1; then
+    ok "gh auth"
+  else
+    fail "gh auth" "not logged in or token invalid"
+  fi
+fi
+
+if [[ "$CHECK_NETWORK" == true ]] && have ssh; then
+  ssh_out="$(run_timeout 20 ssh -o BatchMode=yes -o ConnectTimeout=8 -T git@github.com 2>&1 || true)"
+  if printf '%s\n' "$ssh_out" | grep -q "successfully authenticated"; then
+    ok "GitHub SSH"
+  else
+    fail "GitHub SSH" "$(printf '%s\n' "$ssh_out" | sed -n '1p')"
+  fi
+fi
+
+if [[ "$CHECK_NETWORK" == true ]] && have git; then
+  if run_timeout 30 git ls-remote "$REPO" HEAD >/dev/null 2>&1; then
+    ok "git ls-remote"
+  else
+    fail "git ls-remote" "$REPO"
+  fi
+fi
+
+echo
+echo "Tailscale and network"
+if have tailscale; then
+  if tailscale status >/dev/null 2>&1; then
+    ok "tailscale status"
+  else
+    fail "tailscale status"
+  fi
+else
+  skip "tailscale status" "tailscale missing"
+fi
+
+if have ip; then
+  if ip -4 route get 1.1.1.1 >/dev/null 2>&1; then
+    ok "IPv4 egress route"
+  else
+    warn "IPv4 egress route" "no native IPv4 route"
+    if ip -6 route get 64:ff9b::0808:0808 2>/dev/null | grep -q 'tailscale0'; then
+      ok "NAT64 route"
+    else
+      fail "NAT64 route" "no native IPv4 and no 64:ff9b::/96 route over tailscale0"
+    fi
+    if getent ahostsv6 api.cline.bot 2>/dev/null | grep -q '64:ff9b::'; then
+      ok "DNS64 synthesis"
+    else
+      fail "DNS64 synthesis" "api.cline.bot did not synthesize 64:ff9b::/96"
+    fi
+  fi
+fi
+
+if [[ "$CHECK_NETWORK" == true ]] && have curl && have getent; then
+  if getent ahostsv6 api.cline.bot 2>/dev/null | grep -q '64:ff9b::'; then
+    http_code="$(run_timeout 20 curl -6 -sS -o /dev/null -w '%{http_code}' https://api.cline.bot/api/v1/models 2>/dev/null || true)"
+    case "$http_code" in
+      200|401|403) ok "Cline API reachability" "HTTP ${http_code}" ;;
+      *) fail "Cline API reachability" "HTTP ${http_code:-none}" ;;
+    esac
+  fi
+fi
+
+echo
+echo "Firewall and SSH"
+if have ufw; then
+  if [[ "$(id -u)" -eq 0 ]]; then
+    ufw status >/dev/null 2>&1 && ok "ufw status" || warn "ufw status" "not active or unavailable"
+  elif sudo -n true >/dev/null 2>&1; then
+    sudo ufw status >/dev/null 2>&1 && ok "ufw status" || warn "ufw status" "not active or unavailable"
+  else
+    warn "ufw status" "sudo required"
+  fi
+else
+  skip "ufw status" "ufw missing"
+fi
+
+if have sshd; then
+  sshd_t="$(sshd -T 2>/dev/null || true)"
+  if [[ -n "$sshd_t" ]]; then
+    printf '%s\n' "$sshd_t" | grep -q '^passwordauthentication no$' && ok "sshd password auth disabled" || warn "sshd password auth disabled" "not effective"
+    printf '%s\n' "$sshd_t" | grep -q '^kbdinteractiveauthentication no$' && ok "sshd keyboard-interactive disabled" || warn "sshd keyboard-interactive disabled" "not effective"
+  else
+    warn "sshd effective config" "could not read sshd -T"
+  fi
+fi
+
+echo
+echo "Secrets"
+if have pass; then
+  for entry in "${PASS_PREFIX}/pi" "${PASS_PREFIX}/hermes" "${PASS_PREFIX}/opencode"; do
+    if run_timeout 15 pass show "$entry" >/dev/null 2>&1; then
+      ok "pass ${entry}"
+    else
+      fail "pass ${entry}" "missing, locked, or unreadable"
+    fi
+  done
+else
+  fail "pass" "missing"
+fi
+
+echo
+echo "Agent auth"
+have codex && check_contains "codex login" "Logged in" codex login status
+have claude && check_exit "claude auth" claude auth status --text
+if have cursor-agent; then
+  check_contains "cursor-agent auth" "Logged in" cursor-agent status
+fi
+if have cline; then
+  if [[ -f "$HOME/.cline/data/settings/providers.json" ]] && have node; then
+    if node -e 'const fs=require("fs"); const p=process.env.HOME+"/.cline/data/settings/providers.json"; const d=JSON.parse(fs.readFileSync(p,"utf8")); const k="access"+"Token"; process.exit(d.providers?.cline?.settings?.auth?.[k] ? 0 : 1)' >/dev/null 2>&1; then
+      ok "cline auth token"
+    else
+      fail "cline auth token" "missing"
+    fi
+  else
+    warn "cline auth token" "providers.json or node missing"
+  fi
+fi
+
+if [[ "$FULL" == true ]]; then
+  echo
+  echo "Full model probes"
+  have pi && check_contains "pi GLM probe" "GLM_OK" run_timeout 120 pi --provider cline-pass --model cline-pass/glm-5.2 --no-tools --no-session -p "Reply exactly GLM_OK"
+  have hermes && check_contains "hermes GLM probe" "GLM_OK" run_timeout 120 hermes --provider cline-pass -m cline-pass/glm-5.2 -z "Reply exactly GLM_OK"
+  have opencode && check_contains "opencode GLM probe" "GLM_OK" run_timeout 120 opencode run -m cline-pass/glm-5.2 "Reply exactly GLM_OK"
+  have cline && check_contains "cline probe" "CLINE_OK" run_timeout 120 cline --json --auto-approve false -P cline -t 60 "Reply exactly CLINE_OK"
+  have agy && check_contains "agy probe" "AGY_OK" run_timeout 120 agy --print "Reply exactly AGY_OK"
+else
+  skip "full model probes" "use --full"
+fi
+
+echo
+printf 'summary: ok=%s warn=%s fail=%s skip=%s\n' "$OK" "$WARN" "$FAIL" "$SKIP"
+if [[ "$FAIL" -gt 0 ]]; then
+  exit 1
+fi

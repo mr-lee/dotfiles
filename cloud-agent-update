@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DOTFILES_DIR="${HOME}/dotfiles"
+DOTFILES_URL="https://github.com/mr-lee/dotfiles.git"
+BRANCH="master"
+UPDATE_SYSTEM=false
+UPDATE_AGENTS=true
+RUN_DOCTOR=true
+FULL_DOCTOR=false
+DRY_RUN=false
+
+usage() {
+  cat <<'EOF'
+usage: cloud-agent-update [options]
+
+Update dotfiles-managed cloud agent tooling, then run a health check.
+
+Defaults:
+  - fetch dotfiles over public HTTPS with global Git config disabled
+  - refresh user-level agent tools, Cline Pass adapters, tmux wrappers, and helpers
+  - do not run apt/system package changes unless --system is passed
+  - run quick cloud-agent-doctor
+
+Options:
+  --dotfiles DIR     Dotfiles checkout (default: ~/dotfiles)
+  --repo URL         Public dotfiles URL (default: https://github.com/mr-lee/dotfiles.git)
+  --branch BRANCH    Branch to fetch (default: master)
+  --system           Include apt/system package installation
+  --no-agents        Skip agent CLI updates
+  --no-doctor        Skip doctor after update
+  --full-doctor      Run model probes in doctor; may incur provider usage
+  --dry-run          Print commands without changing the machine
+  -h, --help         Show this help
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dotfiles)
+      DOTFILES_DIR="$2"
+      shift 2
+      ;;
+    --repo)
+      DOTFILES_URL="$2"
+      shift 2
+      ;;
+    --branch)
+      BRANCH="$2"
+      shift 2
+      ;;
+    --system)
+      UPDATE_SYSTEM=true
+      shift
+      ;;
+    --no-agents)
+      UPDATE_AGENTS=false
+      shift
+      ;;
+    --no-doctor)
+      RUN_DOCTOR=false
+      shift
+      ;;
+    --full-doctor)
+      FULL_DOCTOR=true
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "ERROR: unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+run() {
+  printf '+'
+  printf ' %q' "$@"
+  printf '\n'
+  if [[ "$DRY_RUN" != true ]]; then
+    "$@"
+  fi
+}
+
+fetch_dotfiles() {
+  if [[ -d "${DOTFILES_DIR}/.git" ]]; then
+    run env GIT_CONFIG_GLOBAL=/dev/null git -C "$DOTFILES_DIR" fetch "$DOTFILES_URL" "$BRANCH"
+    run git -C "$DOTFILES_DIR" merge --ff-only FETCH_HEAD
+  else
+    run env GIT_CONFIG_GLOBAL=/dev/null git clone --branch "$BRANCH" "$DOTFILES_URL" "$DOTFILES_DIR"
+  fi
+}
+
+run_setup() {
+  local setup="${DOTFILES_DIR}/setup-cloud-agent-machine.sh"
+  if [[ ! -x "$setup" ]]; then
+    echo "ERROR: missing executable setup script: ${setup}" >&2
+    exit 1
+  fi
+
+  local args=()
+  if [[ "$UPDATE_SYSTEM" != true ]]; then
+    args+=(--no-system)
+  fi
+  args+=(--no-tailscale)
+  if [[ "$UPDATE_AGENTS" != true ]]; then
+    args+=(--no-agents)
+  fi
+  if [[ "$DRY_RUN" == true ]]; then
+    args+=(--dry-run)
+  fi
+
+  run "$setup" "${args[@]}"
+}
+
+run_doctor() {
+  if [[ "$RUN_DOCTOR" != true ]]; then
+    return
+  fi
+
+  local doctor="${DOTFILES_DIR}/cloud-agent-doctor"
+  if [[ ! -x "$doctor" ]]; then
+    doctor="${HOME}/.local/bin/cloud-agent-doctor"
+  fi
+  if [[ ! -x "$doctor" ]]; then
+    echo "WARN: cloud-agent-doctor not found; skipping" >&2
+    return
+  fi
+
+  local args=()
+  if [[ "$FULL_DOCTOR" == true ]]; then
+    args+=(--full)
+  fi
+  run "$doctor" "${args[@]}"
+}
+
+echo "cloud-agent-update -> ${DOTFILES_DIR}"
+if [[ "$DRY_RUN" == true ]]; then
+  echo "(dry run - no changes will be made)"
+fi
+echo
+
+fetch_dotfiles
+run_setup
+run_doctor
