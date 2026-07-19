@@ -16,6 +16,7 @@ setup-cline-pass-agents.sh - Credential-free Cline Pass setup for Pi, Hermes, op
 setup-cloud-agent-machine.sh - Credential-free Ubuntu/Debian cloud dev bootstrap
 setup-tailscale-nat64.sh - Two-host Tailscale NAT64/DNS64 setup for IPv6-only clients
 tmux-agent        - Stable tmux launcher for pilot/agent sessions
+docs/cloud-agent-runbook.md - Public-safe rebuild guide for cloud agent hosts
 ```
 
 ## Install
@@ -44,6 +45,7 @@ The install script:
 - Zsh plugins are git-cloned into `~/.zsh/plugins/` (no framework, no oh-my-zsh)
 - `~/.zshrc.local` can be used for machine-specific overrides (sourced last by `.zshrc.personal`, not versioned)
 - Cloud networking helpers must stay credential-free and avoid making a gateway an exit node unless explicitly requested.
+- Cloud setup docs must stay public-safe: placeholders only for IPs, tailnet names, key fingerprints, account emails, and hostnames.
 
 ## Making Changes
 

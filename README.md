@@ -35,6 +35,8 @@ Preview first with `./install.sh --dry-run`.
 
 ## Cloud agent machine
 
+Detailed rebuild steps are in [docs/cloud-agent-runbook.md](docs/cloud-agent-runbook.md).
+
 On a fresh Ubuntu/Debian cloud user:
 
 ```bash
@@ -104,7 +106,7 @@ For an IPv6-only cloud box that needs access to IPv4-only model/auth endpoints,
 use a separate IPv4-capable Tailscale node as a NAT64 gateway:
 
 ```bash
-./setup-tailscale-nat64.sh hadmin-ts hbig-root-ts
+./setup-tailscale-nat64.sh <gateway-admin-ssh-alias> <client-root-ssh-alias>
 ```
 
 After the gateway step, approve only the advertised subnet route

@@ -25,7 +25,7 @@ Set up IPv4-only egress for an IPv6-only Tailscale node without making the
 gateway an exit node.
 
 Example:
-  ./setup-tailscale-nat64.sh hadmin-ts hbig-root-ts
+  ./setup-tailscale-nat64.sh <gateway-admin-ssh-alias> <client-root-ssh-alias>
 
 The gateway host should be an SSH alias/user with sudo. The client host should
 be root or sudo-capable. The script does not write credentials.
