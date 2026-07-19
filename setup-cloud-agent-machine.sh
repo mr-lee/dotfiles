@@ -491,7 +491,7 @@ Interactive auth:
 
 GitHub auth:
   ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github -C "\$(hostname)-github" -N ""
-  gh auth login --hostname github.com --git-protocol ssh --web --skip-ssh-key
+  gh auth login --hostname github.com --git-protocol ssh --web
   gh ssh-key add ~/.ssh/id_ed25519_github.pub --title "\$(hostname)-agent"
   gh auth setup-git --hostname github.com
 
