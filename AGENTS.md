@@ -14,6 +14,7 @@ starship.toml      - Starship prompt config
 install.sh         - Full setup: symlinks, Starship, zsh plugins, zshrc wiring
 setup-cline-pass-agents.sh - Credential-free Cline Pass setup for Pi, Hermes, opencode
 setup-cloud-agent-machine.sh - Credential-free Ubuntu/Debian cloud dev bootstrap
+setup-tailscale-nat64.sh - Two-host Tailscale NAT64/DNS64 setup for IPv6-only clients
 tmux-agent        - Stable tmux launcher for pilot/agent sessions
 ```
 
@@ -42,6 +43,7 @@ The install script:
 - `.zshrc.personal` is the personal zsh layer - it gets sourced from the system/work `.zshrc`, not the other way around. Never replace `.zshrc` with this file.
 - Zsh plugins are git-cloned into `~/.zsh/plugins/` (no framework, no oh-my-zsh)
 - `~/.zshrc.local` can be used for machine-specific overrides (sourced last by `.zshrc.personal`, not versioned)
+- Cloud networking helpers must stay credential-free and avoid making a gateway an exit node unless explicitly requested.
 
 ## Making Changes
 

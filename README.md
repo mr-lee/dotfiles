@@ -14,6 +14,7 @@ Personal dotfiles for macOS/Linux. Managed with symlinks, no framework.
 | `starship.toml` | [Starship](https://starship.rs) prompt config |
 | `setup-cline-pass-agents.sh` | Credential-free bootstrap for Cline Pass provider config in Pi, Hermes, and opencode |
 | `setup-cloud-agent-machine.sh` | Credential-free Ubuntu/Debian cloud dev bootstrap for agents, Tailscale, Mosh, and tmux launchers |
+| `setup-tailscale-nat64.sh` | Two-host Tailscale NAT64/DNS64 setup for IPv6-only cloud agents |
 | `tmux-agent` | Stable tmux launcher for `pilot`, Codex, Claude, Cline, Cursor, Gemini, Goose, Antigravity, Pi, Hermes, and opencode |
 
 ## Install
@@ -96,6 +97,25 @@ pi-tmux
 hermes-tmux
 opencode-tmux
 ```
+
+### IPv6-only clients
+
+For an IPv6-only cloud box that needs access to IPv4-only model/auth endpoints,
+use a separate IPv4-capable Tailscale node as a NAT64 gateway:
+
+```bash
+./setup-tailscale-nat64.sh hadmin-ts hbig-root-ts
+```
+
+After the gateway step, approve only the advertised subnet route
+`64:ff9b::/96` for the gateway machine in the Tailscale admin console. Do not
+enable "use as exit node" unless you intentionally want all client internet
+traffic routed through the gateway.
+
+The script configures TAYGA on the gateway, appends the NAT64 route to its
+Tailscale advertised routes, disables subnet-route SNAT for this route, enables
+route acceptance on the client, and configures DNS64 via `systemd-resolved`.
+It does not write credentials.
 
 ## Cline Pass agents
 
