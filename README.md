@@ -54,7 +54,7 @@ Preview first:
 ./setup-cloud-agent-machine.sh --dry-run
 ```
 
-This installs base dev packages, GitHub CLI, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, stable tmux launchers, and cloud helper commands. It does not write credentials.
+This installs base dev packages, GitHub CLI, Tailscale/Mosh, Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, opencode, Cline Pass adapters, a one-week `pass`/GPG cache policy, stable tmux launchers, and cloud helper commands. It does not write credentials.
 
 Credentials stay explicit:
 

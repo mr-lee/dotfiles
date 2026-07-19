@@ -301,6 +301,20 @@ pass show agents/cline-pass/hermes >/dev/null
 pass show agents/cline-pass/opencode >/dev/null
 ```
 
+The bootstrap configures `gpg-agent` so `pass` unlocks cache for one week:
+
+```text
+default-cache-ttl 604800
+max-cache-ttl 604800
+```
+
+That keeps repeated agent use practical without writing raw provider keys to
+shell startup files. It also means any process running as the agent user can
+decrypt those `pass` entries while the cache is warm, so keep host access
+tightly scoped and rotate provider keys if a host is ever suspected compromised.
+Override with `./setup-cloud-agent-machine.sh --gpg-cache-ttl <seconds>` if a
+shorter cache is preferable for a specific machine.
+
 Keep the private GPG key backup and password store backup outside this public
 repo.
 
@@ -361,7 +375,7 @@ Some tools do not expose a clean non-interactive status command. For those, use
 a tiny prompt probe after login:
 
 ```bash
-cline --json --auto-approve false -P cline -t 60 'Reply exactly CLINE_OK'
+cline --json --thinking none -P cline -t 60 'Reply exactly CLINE_OK'
 agy --print 'Reply exactly AGY_OK'
 ```
 
@@ -555,7 +569,7 @@ pi --provider cline-pass --model cline-pass/glm-5.2 --no-tools --no-session -p '
 hermes --provider cline-pass -m cline-pass/glm-5.2 -z 'Reply exactly GLM_OK'
 opencode run -m cline-pass/glm-5.2 'Reply exactly GLM_OK'
 
-cline --json --auto-approve false -P cline -t 60 'Reply exactly CLINE_OK'
+cline --json --thinking none -P cline -t 60 'Reply exactly CLINE_OK'
 agy --print 'Reply exactly AGY_OK'
 ```
 

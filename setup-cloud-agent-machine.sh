@@ -11,6 +11,8 @@ LINGER_USER=""
 CONFIGURE_GIT=true
 GIT_USER_NAME="Matt Lee"
 GIT_USER_EMAIL="mr-lee@users.noreply.github.com"
+CONFIGURE_GPG_AGENT=true
+GPG_CACHE_TTL=604800
 INSTALL_AGENTS=true
 CONFIGURE_CLINE_PASS=true
 INSTALL_TMUX_AGENT=true
@@ -30,6 +32,7 @@ Defaults:
   - install Ubuntu/Debian base packages when apt/sudo are available
   - install GitHub CLI and configure baseline Git identity/remotes
   - install Tailscale and Mosh, but do not run tailscale up unless requested
+  - configure gpg-agent so pass unlocks cache for one week
   - install Codex, Claude Code, Cline, Cursor Agent, Antigravity CLI, Pi, Hermes, and opencode
   - configure Cline Pass adapters for Pi, Hermes, and opencode
   - install tmux-agent wrappers for stable phone/laptop sessions
@@ -44,11 +47,13 @@ Options:
   --linger-user USER           Enable systemd user lingering for persistent agent/GPG sessions
   --git-user-name NAME         Git user.name (default: Matt Lee)
   --git-user-email EMAIL       Git user.email (default: mr-lee@users.noreply.github.com)
+  --gpg-cache-ttl SECONDS      pass/GPG private-key cache TTL (default: 604800, one week)
   --enable-firewall            Enable UFW: deny incoming, allow outgoing, allow public SSH and Tailscale SSH/Mosh
   --tailscale-only-ssh         Enable UFW with SSH/Mosh allowed only on tailscale0
   --harden-ssh                 Disable password/kbd-interactive/root SSH in sshd_config.d
   --no-system                  Skip apt/system package installation
   --no-git-config              Skip baseline Git configuration
+  --no-gpg-agent-config        Skip gpg-agent pass cache configuration
   --no-tailscale               Skip Tailscale installation
   --no-agents                  Skip agent CLI installation
   --no-cline-pass              Skip Cline Pass adapter configuration
@@ -92,6 +97,10 @@ while [[ $# -gt 0 ]]; do
       GIT_USER_EMAIL="$2"
       shift 2
       ;;
+    --gpg-cache-ttl)
+      GPG_CACHE_TTL="$2"
+      shift 2
+      ;;
     --enable-firewall)
       ENABLE_FIREWALL=true
       shift
@@ -111,6 +120,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-git-config)
       CONFIGURE_GIT=false
+      shift
+      ;;
+    --no-gpg-agent-config)
+      CONFIGURE_GPG_AGENT=false
       shift
       ;;
     --no-tailscale)
@@ -232,6 +245,52 @@ ensure_gpg_tty_block() {
     printf '%s\n' 'fi'
     printf '%s\n' "$end"
   } >> "$file"
+}
+
+configure_gpg_agent() {
+  local gnupg_dir="${TARGET_DIR}/.gnupg"
+  local config="${gnupg_dir}/gpg-agent.conf"
+  local begin="# >>> cloud-agent-machine pass cache"
+  local end="# <<< cloud-agent-machine pass cache"
+
+  if [[ ! "$GPG_CACHE_TTL" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: --gpg-cache-ttl must be an integer number of seconds" >&2
+    exit 2
+  fi
+
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "  ensure gpg-agent pass cache ttl ${GPG_CACHE_TTL}s in ${config}"
+    return
+  fi
+
+  mkdir -p "$gnupg_dir"
+  chmod 700 "$gnupg_dir"
+  touch "$config"
+  chmod 600 "$config"
+
+  local tmp
+  tmp="$(mktemp "${config}.XXXXXX")"
+  {
+    printf '%s\n' "$begin"
+    printf 'default-cache-ttl %s\n' "$GPG_CACHE_TTL"
+    printf 'max-cache-ttl %s\n' "$GPG_CACHE_TTL"
+    printf '%s\n' "$end"
+    printf '\n'
+    awk -v begin="$begin" -v end="$end" '
+      $0 == begin { skip = 1; next }
+      $0 == end { skip = 0; next }
+      skip { next }
+      $1 == "default-cache-ttl" { next }
+      $1 == "max-cache-ttl" { next }
+      { print }
+    ' "$config"
+  } > "$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" "$config"
+
+  if need_cmd gpgconf; then
+    run gpgconf --reload gpg-agent
+  fi
 }
 
 install_system_packages() {
@@ -516,6 +575,9 @@ GitHub auth:
   gh ssh-key add ~/.ssh/id_ed25519_github.pub --title "\$(hostname)-agent"
   gh auth setup-git --hostname github.com
 
+pass/GPG cache:
+  gpg-agent pass cache TTL: ${GPG_CACHE_TTL}s
+
 Tailscale:
   sudo tailscale up --hostname ${TAILSCALE_HOSTNAME}
 
@@ -578,6 +640,12 @@ if [[ "$CONFIGURE_GIT" == true ]]; then
   echo
   echo "Git"
   configure_git
+fi
+
+if [[ "$CONFIGURE_GPG_AGENT" == true ]]; then
+  echo
+  echo "GPG agent"
+  configure_gpg_agent
 fi
 
 if [[ -n "$LINGER_USER" ]]; then
