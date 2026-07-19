@@ -128,7 +128,7 @@ shell history, repo files, or issue trackers.
 As `<agent-user>`:
 
 ```bash
-git -c url.git@github.com:.insteadOf= clone https://github.com/mr-lee/dotfiles.git ~/dotfiles
+GIT_CONFIG_GLOBAL=/dev/null git clone https://github.com/mr-lee/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./setup-cloud-agent-machine.sh
 ```
