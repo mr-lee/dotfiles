@@ -311,6 +311,43 @@ configure_git() {
   run git config --global user.email "$GIT_USER_EMAIL"
   run git config --global init.defaultBranch main
   run git config --global url.git@github.com:.insteadOf https://github.com/
+  ensure_github_ssh_config
+}
+
+ensure_github_ssh_config() {
+  local ssh_dir="${TARGET_DIR}/.ssh"
+  local config="${ssh_dir}/config"
+  local begin="# >>> cloud-agent-machine github ssh"
+  local end="# <<< cloud-agent-machine github ssh"
+
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "  ensure GitHub SSH config in ${config}"
+    return
+  fi
+
+  mkdir -p "$ssh_dir"
+  chmod 700 "$ssh_dir"
+  touch "$config"
+  chmod 600 "$config"
+  if grep -qxF "$begin" "$config"; then
+    return
+  fi
+
+  local tmp
+  tmp="$(mktemp "${ssh_dir}/.config.github.XXXXXX")"
+  {
+    printf '%s\n' "$begin"
+    printf '%s\n' 'Host github.com'
+    printf '%s\n' '  HostName github.com'
+    printf '%s\n' '  User git'
+    printf '%s\n' '  IdentityFile ~/.ssh/id_ed25519_github'
+    printf '%s\n' '  IdentitiesOnly yes'
+    printf '%s\n' "$end"
+    printf '\n'
+    cat "$config"
+  } > "$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" "$config"
 }
 
 install_agents() {
@@ -454,7 +491,7 @@ Interactive auth:
 
 GitHub auth:
   ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github -C "\$(hostname)-github" -N ""
-  gh auth login --hostname github.com --git-protocol ssh --web
+  gh auth login --hostname github.com --git-protocol ssh --web --skip-ssh-key
   gh ssh-key add ~/.ssh/id_ed25519_github.pub --title "\$(hostname)-agent"
   gh auth setup-git --hostname github.com
 

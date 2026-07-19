@@ -128,7 +128,7 @@ shell history, repo files, or issue trackers.
 As `<agent-user>`:
 
 ```bash
-git clone https://github.com/mr-lee/dotfiles.git ~/dotfiles
+git -c url.git@github.com:.insteadOf= clone https://github.com/mr-lee/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 ./setup-cloud-agent-machine.sh
 ```
@@ -186,6 +186,9 @@ git config --global init.defaultBranch main
 git config --global url.git@github.com:.insteadOf https://github.com/
 ```
 
+It also writes a managed SSH config block for `github.com` that uses
+`~/.ssh/id_ed25519_github`. This key is generated manually in the next step.
+
 Do not copy a laptop GitHub token or laptop SSH private key to the cloud host.
 Use a separate SSH key and separate `gh` login per host, so access can be
 revoked per machine.
@@ -197,7 +200,7 @@ mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_github -C "$(hostname)-github" -N ""
 
-gh auth login --hostname github.com --git-protocol ssh --web
+gh auth login --hostname github.com --git-protocol ssh --web --skip-ssh-key
 gh ssh-key add ~/.ssh/id_ed25519_github.pub --title "$(hostname)-agent"
 gh auth setup-git --hostname github.com
 ```
