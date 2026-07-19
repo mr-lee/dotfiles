@@ -286,7 +286,7 @@ if [[ "$FULL" == true ]]; then
   have pi && check_contains "pi GLM probe" "GLM_OK" run_timeout 120 pi --provider cline-pass --model cline-pass/glm-5.2 --no-tools --no-session -p "Reply exactly GLM_OK"
   have hermes && check_contains "hermes GLM probe" "GLM_OK" run_timeout 120 hermes --provider cline-pass -m cline-pass/glm-5.2 -z "Reply exactly GLM_OK"
   have opencode && check_contains "opencode GLM probe" "GLM_OK" run_timeout 120 opencode run -m cline-pass/glm-5.2 "Reply exactly GLM_OK"
-  have cline && check_contains "cline probe" "CLINE_OK" run_timeout 120 cline --json --auto-approve false -P cline -t 60 "Reply exactly CLINE_OK"
+  have cline && check_contains "cline probe" "CLINE_OK" run_timeout 120 cline --json --thinking none -P cline -t 60 "Reply exactly CLINE_OK"
   have agy && check_contains "agy probe" "AGY_OK" run_timeout 120 agy --print "Reply exactly AGY_OK"
 else
   skip "full model probes" "use --full"
